@@ -3,6 +3,10 @@ import '../models/pap.dart';
 import 'pap_stepper_screen.dart';
 import 'menage_form_screen.dart';
 import 'activite_form_screen.dart';
+import 'logement_form_screen.dart';
+import 'agriculture_form_screen.dart';
+import 'finance_form_screen.dart';
+import 'securite_alimentaire_form_screen.dart';
 import 'avis_projet_form_screen.dart';
 import 'sante_education_form_screen.dart';
 
@@ -58,6 +62,20 @@ class _PapDashboardScreenState extends State<PapDashboardScreen> {
               },
             ),
 
+            // LOGEMENT & MATERIAUX
+            _buildSectionCard(
+              title: 'Logement & Matériaux',
+              icon: Icons.house,
+              color: const Color(0xFF009E60),
+              isCompleted: false, // À connecter avec SQLite
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => LogementFormScreen(idMenage: widget.pap.identifiantPap ?? '')),
+                );
+              },
+            ),
+
             // ACTIVITE
             _buildSectionCard(
               title: 'Activités & Revenus',
@@ -72,7 +90,52 @@ class _PapDashboardScreenState extends State<PapDashboardScreen> {
               },
             ),
 
-            // SANTE & EDUCATION
+            // AGRICULTURE & ÉLEVAGE
+            _buildSectionCard(
+              title: 'Agriculture & Élevage',
+              icon: Icons.agriculture,
+              color: const Color(0xFF8B4513), // Marron
+              isCompleted: false,
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AgricultureFormScreen(idMenage: widget.pap.identifiantPap ?? '')),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // FINANCES & CRÉDITS
+            _buildSectionCard(
+              title: 'Finances & Crédits',
+              icon: Icons.account_balance_wallet,
+              color: Colors.indigo,
+              isCompleted: false,
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => FinanceFormScreen(idMenage: widget.pap.identifiantPap ?? '')),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // SÉCURITÉ ALIMENTAIRE
+            _buildSectionCard(
+              title: 'Sécurité Alimentaire',
+              icon: Icons.food_bank,
+              color: Colors.redAccent,
+              isCompleted: false,
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SecuriteAlimentaireFormScreen(idMenage: widget.pap.identifiantPap ?? '')),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // SANTÉ & ÉDUCATION
             _buildSectionCard(
               title: 'Santé & Éducation',
               icon: Icons.health_and_safety,

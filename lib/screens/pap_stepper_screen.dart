@@ -4,7 +4,7 @@ import 'dart:io';
 import '../models/pap.dart';
 import '../models/document.dart';
 import '../services/database_helper.dart';
-import 'package:intl/intl.dart';
+import '../services/ocr_service.dart';
 
 class PapStepperScreen extends StatefulWidget {
   final String idEnquete;
@@ -18,9 +18,11 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
   final _formKey = GlobalKey<FormState>();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ImagePicker _picker = ImagePicker();
+  final OcrService _ocrService = OcrService();
 
   int _currentStep = 0;
   bool _isSaving = false;
+  bool _isScanning = false;
 
   // Controllers
   final _nomController = TextEditingController();
@@ -32,6 +34,34 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
   File? _photoPap;
   File? _photoPieceRecto;
   File? _photoPieceVerso;
+
+  @override
+  void dispose() {
+    _ocrService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _scanCni() async {
+    setState(() => _isScanning = true);
+    try {
+      final result = await _ocrService.scanCniFromCamera();
+      if (result != null && mounted) {
+        setState(() {
+          if (result.nom != null) _nomController.text = "${result.nom} ${result.prenoms ?? ''}".trim();
+          if (result.numeroPiece != null) _numPieceController.text = result.numeroPiece!;
+          if (result.dateNaissance != null) {
+            try {
+              final parts = result.dateNaissance!.split('/');
+              _dateNaissance = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+            } catch (_) {}
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Données extraites avec succès!')));
+      }
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
+  }
 
   Future<void> _pickImage(String type) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
@@ -134,6 +164,13 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
               isActive: _currentStep >= 0,
               content: Column(
                 children: [
+                  ElevatedButton.icon(
+                    onPressed: _isScanning ? null : _scanCni,
+                    icon: _isScanning ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.document_scanner),
+                    label: const Text('SCANNER LA CNI (Auto-Remplissage)'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _identifiantPapController,
                     decoration: const InputDecoration(labelText: 'Identifiant PAP (Ex: PAP-001)', border: OutlineInputBorder()),
