@@ -37,6 +37,9 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
   final _identifiantPapController = TextEditingController();
   final _numPieceController = TextEditingController();
   final _lieuResidenceController = TextEditingController();
+  final _telephoneController = TextEditingController();
+  final _nomProprioController = TextEditingController();
+  final _motifInstallController = TextEditingController();
   DateTime? _dateNaissance;
 
   // Details
@@ -45,6 +48,10 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
   String? _ethnie;
   String? _niveauInstruc;
   String? _statutBien;
+  String? _typePiece;
+  String? _situationMat;
+  String? _appCulture;
+  int? _anneeInst;
 
   final List<String> _statutsBien = [
     'Propriétaire (Foncier/Bâti avec Titre)',
@@ -77,12 +84,19 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
       _identifiantPapController.text = widget.papToEdit!.identifiantPap ?? '';
       _numPieceController.text = widget.papToEdit!.numPiece ?? '';
       _lieuResidenceController.text = widget.papToEdit!.lieuResidenceAct ?? '';
+      _telephoneController.text = widget.papToEdit!.telephone1 ?? '';
+      _nomProprioController.text = widget.papToEdit!.nomProprio ?? '';
+      _motifInstallController.text = widget.papToEdit!.motifInstall ?? '';
       _dateNaissance = widget.papToEdit!.dateNaissance;
       _sexe = widget.papToEdit!.genre;
       _nationalite = widget.papToEdit!.nationalite;
       _ethnie = widget.papToEdit!.ethnie;
       _niveauInstruc = widget.papToEdit!.niveauInstruc;
       _statutBien = widget.papToEdit!.statutBien;
+      _typePiece = widget.papToEdit!.typePiece;
+      _situationMat = widget.papToEdit!.situationMat;
+      _appCulture = widget.papToEdit!.appCulture;
+      _anneeInst = widget.papToEdit!.anneeInst;
     } else {
       _autoLocate();
     }
@@ -92,6 +106,9 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
   void dispose() {
     _ocrService.dispose();
     _lieuResidenceController.dispose();
+    _telephoneController.dispose();
+    _nomProprioController.dispose();
+    _motifInstallController.dispose();
     super.dispose();
   }
 
@@ -262,12 +279,19 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
         identifiantPap: papId,
         idEnquete: widget.idEnquete,
         nomPap: _nomController.text.trim(),
+        typePiece: _typePiece,
         numPiece: _numPieceController.text.trim(),
         dateNaissance: _dateNaissance,
         genre: _sexe,
         nationalite: _nationalite,
         ethnie: _ethnie,
         niveauInstruc: _niveauInstruc,
+        situationMat: _situationMat,
+        appCulture: _appCulture,
+        anneeInst: _anneeInst,
+        motifInstall: _motifInstallController.text.trim(),
+        telephone1: _telephoneController.text.trim(),
+        nomProprio: _nomProprioController.text.trim(),
         lieuResidenceAct: _lieuResidenceController.text.trim(),
         statutBien: _statutBien,
         createdAt: widget.papToEdit?.createdAt ?? DateTime.now(),
@@ -495,9 +519,24 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
               isActive: _currentStep >= 1,
               content: Column(
                 children: [
+                  DropdownButtonFormField<String>(
+                    value: _typePiece,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Type de pièce d\'identité', prefixIcon: Icon(Icons.credit_card)),
+                    items: ['CNI', 'Passeport', 'Carte de séjour', 'Permis de conduire', 'Acte de naissance', 'Autre']
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) => setState(() => _typePiece = v),
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _numPieceController,
-                    decoration: const InputDecoration(labelText: 'Numéro de Pièce (CNI)', prefixIcon: Icon(Icons.credit_card)),
+                    decoration: const InputDecoration(labelText: 'Numéro de pièce', prefixIcon: Icon(Icons.credit_card)),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _telephoneController,
+                    decoration: const InputDecoration(labelText: 'Téléphone', prefixIcon: Icon(Icons.phone)),
+                    keyboardType: TextInputType.phone,
                   ),
                   const SizedBox(height: 16),
                   ListTile(
@@ -542,6 +581,41 @@ class _PapStepperScreenState extends State<PapStepperScreen> {
                     decoration: const InputDecoration(labelText: 'Niveau d\'étude', prefixIcon: Icon(Icons.school)),
                     items: _niveaux.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setState(() => _niveauInstruc = v),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _situationMat,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Situation matrimoniale', prefixIcon: Icon(Icons.favorite)),
+                    items: ['Célibataire', 'Marié(e) monogame', 'Marié(e) polygame', 'Divorcé(e)', 'Veuf/Veuve', 'Union libre']
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) => setState(() => _situationMat = v),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _appCulture,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Appartenance culturelle', prefixIcon: Icon(Icons.diversity_3)),
+                    items: ['Akan', 'Krou', 'Mandé du Nord', 'Mandé du Sud', 'Voltaïque/Gur', 'Etranger', 'Autre']
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) => setState(() => _appCulture = v),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Année d\'installation dans le lieu', prefixIcon: Icon(Icons.calendar_month)),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => _anneeInst = int.tryParse(v),
+                    controller: TextEditingController(text: _anneeInst?.toString() ?? ''),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _motifInstallController,
+                    decoration: const InputDecoration(labelText: 'Motif d\'installation', prefixIcon: Icon(Icons.info_outline)),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _nomProprioController,
+                    decoration: const InputDecoration(labelText: 'Nom du propriétaire du terrain (si applicable)', prefixIcon: Icon(Icons.person_outline)),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(

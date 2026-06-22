@@ -29,7 +29,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'ptua_database_v4.db');
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -44,8 +44,15 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE enquetes ADD COLUMN signaturePath TEXT;');
     }
     if (oldVersion < 5) {
-      // Add statutBien column which was missing
       await db.execute('ALTER TABLE paps ADD COLUMN statutBien TEXT;');
+    }
+    if (oldVersion < 6) {
+      // Add missing menage fields
+      await db.execute('ALTER TABLE menages ADD COLUMN typeMenage TEXT;');
+      await db.execute('ALTER TABLE menages ADD COLUMN isMembreOrganisation INTEGER DEFAULT 0;');
+      await db.execute('ALTER TABLE menages ADD COLUMN typeOrganisation TEXT;');
+      await db.execute('ALTER TABLE menages ADD COLUMN toucheRetraite INTEGER DEFAULT 0;');
+      await db.execute('ALTER TABLE menages ADD COLUMN montantRetraite REAL;');
     }
   }
 
@@ -109,9 +116,14 @@ class DatabaseHelper {
         idPap TEXT UNIQUE,
         nbrePersonnesMenage INTEGER,
         isChefMen INTEGER,
+        typeMenage TEXT,
         appartenanceOrg TEXT,
         isPersonneVulMenage INTEGER,
         typeSanitaire TEXT,
+        isMembreOrganisation INTEGER DEFAULT 0,
+        typeOrganisation TEXT,
+        toucheRetraite INTEGER DEFAULT 0,
+        montantRetraite REAL,
         createdAt TEXT,
         updatedAt TEXT,
         syncStatus TEXT,

@@ -13,6 +13,9 @@ class InfoLogement {
   final int? moisCaution;
   final double? montantCaution;
   final String? modeAcquisitionTerrain;
+  final String? aMisEnLocation;
+  final int? nbMoisLocation;
+  final double? revenusLocation;
   final String? syncStatus;
   final String? deviceId;
 
@@ -31,6 +34,9 @@ class InfoLogement {
     this.moisCaution,
     this.montantCaution,
     this.modeAcquisitionTerrain,
+    this.aMisEnLocation,
+    this.nbMoisLocation,
+    this.revenusLocation,
     this.syncStatus,
     this.deviceId,
   });
@@ -50,6 +56,9 @@ class InfoLogement {
     'moisCaution': moisCaution,
     'montantCaution': montantCaution,
     'modeAcquisitionTerrain': modeAcquisitionTerrain,
+    'aMisEnLocation': aMisEnLocation,
+    'nbMoisLocation': nbMoisLocation,
+    'revenusLocation': revenusLocation,
     'syncStatus': syncStatus,
     'deviceId': deviceId,
   };
