@@ -75,113 +75,128 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFE1660B)))
           : _enquetes.isEmpty
-              ? const Center(child: Text("Aucune enquête enregistrée."))
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  itemCount: _enquetes.length,
-                  itemBuilder: (context, index) {
-                    final enquete = _enquetes[index];
-                    final isSynced = enquete.syncStatus == 'synced';
-                    
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black.withOpacity(0.05),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
+              ? RefreshIndicator(
+                  onRefresh: _loadData,
+                  color: const Color(0xFFE1660B),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 200),
+                      Center(child: Text("Aucune enquête enregistrée.")),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  color: const Color(0xFFE1660B),
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    itemCount: _enquetes.length,
+                    itemBuilder: (context, index) {
+                      final enquete = _enquetes[index];
+                      final isSynced = enquete.syncStatus == 'synced';
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(20),
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => EnquetePapsScreen(enquete: enquete)),
-                            );
-                            _loadData();
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: isSynced ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black26 : Colors.black.withOpacity(0.05),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => EnquetePapsScreen(enquete: enquete)),
+                              );
+                              _loadData();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: isSynced ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      isSynced ? Icons.cloud_done_rounded : Icons.sync_problem_rounded,
+                                      color: isSynced ? Colors.green : Colors.orange,
+                                      size: 28,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    isSynced ? Icons.cloud_done_rounded : Icons.sync_problem_rounded,
-                                    color: isSynced ? Colors.green : Colors.orange,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        enquete.idEnquete,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold, 
-                                          fontSize: 18, 
-                                          color: isDark ? Colors.white : const Color(0xFF242A5D),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              'Commune: ${enquete.communeCode ?? "N/A"}',
-                                              style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          enquete.idEnquete,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold, 
+                                            fontSize: 18, 
+                                            color: isDark ? Colors.white : const Color(0xFF242A5D),
                                           ),
-                                        ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Commune: ${enquete.communeCode ?? "N/A"}',
+                                                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert, color: Colors.grey[400]),
+                                    onSelected: (value) {
+                                      if (value == 'delete') {
+                                        _confirmDelete(enquete);
+                                      } else if (value == 'edit') {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => EnqueteFormScreen(enqueteToEdit: enquete),
+                                          ),
+                                        ).then((_) => _loadData());
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(value: 'edit', child: Text('Modifier')),
+                                      const PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Supprimer', style: TextStyle(color: Colors.red)),
                                       ),
                                     ],
                                   ),
-                                ),
-                                PopupMenuButton<String>(
-                                  icon: Icon(Icons.more_vert, color: Colors.grey[400]),
-                                  onSelected: (value) {
-                                    if (value == 'delete') {
-                                      _confirmDelete(enquete);
-                                    } else if (value == 'edit') {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => EnqueteFormScreen(enqueteToEdit: enquete),
-                                        ),
-                                      ).then((_) => _loadData());
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('Supprimer', style: TextStyle(color: Colors.red)),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
     );
   }

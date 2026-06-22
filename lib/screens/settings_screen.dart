@@ -86,44 +86,38 @@ class SettingsScreen extends ConsumerWidget {
             elevation: 0,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
-              child: Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   GestureDetector(
                     onTap: showPickerBottomSheet,
                     child: Stack(
                       children: [
                         CircleAvatar(
-                          radius: 30,
+                          radius: 40,
                           backgroundColor: const Color(0xFF242A5D),
                           backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
-                          child: avatarPath == null ? const Icon(Icons.person, size: 30, color: Colors.white) : null,
+                          child: avatarPath == null ? const Icon(Icons.person, size: 40, color: Colors.white) : null,
                         ),
                         Positioned(
                           bottom: 0,
                           right: 0,
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(6),
                             decoration: const BoxDecoration(
                               color: Color(0xFFE1660B),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 12),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Connecté en tant que", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        SizedBox(height: 4),
-                        Text("enqueteur01", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 12),
+                  const Text("Connecté en tant que", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const SizedBox(height: 4),
+                  const Text("enqueteur01", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -169,24 +163,6 @@ class SettingsScreen extends ConsumerWidget {
                       ref.read(themeProvider.notifier).toggleTheme();
                     },
                   ),
-                ),
-                Divider(height: 1, indent: 60, color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF242A5D).withValues(alpha: 0.1), 
-                      borderRadius: BorderRadius.circular(12)
-                    ),
-                    child: const Icon(Icons.sync, color: Color(0xFF242A5D)),
-                  ),
-                  title: const Text('Synchronisation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  subtitle: Text('Gérer les données hors-ligne', style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600)),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                  onTap: () {
-                    // Action future
-                  },
                 ),
               ],
             ),

@@ -71,6 +71,7 @@ class _AvisProjetFormScreenState extends State<AvisProjetFormScreen> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _isAvezCraintes,
                 decoration: const InputDecoration(labelText: 'Avez-vous des craintes ?'),
                 items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
@@ -87,6 +88,7 @@ class _AvisProjetFormScreenState extends State<AvisProjetFormScreen> {
               if (_isAvezCraintes == 'Oui') const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _isAvezAttentes,
                 decoration: const InputDecoration(labelText: 'Avez-vous des attentes ?'),
                 items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),

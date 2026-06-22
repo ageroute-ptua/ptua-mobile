@@ -22,6 +22,7 @@ class Pap {
   final DateTime? updatedAt;
   final String syncStatus;
   final String? deviceId;
+  final String? statutBien;
 
   Pap({
     this.id,
@@ -47,6 +48,7 @@ class Pap {
     this.updatedAt,
     this.syncStatus = 'local',
     this.deviceId,
+    this.statutBien,
   });
 
   factory Pap.fromMap(Map<String, dynamic> map) {
@@ -72,8 +74,9 @@ class Pap {
       telephone1: map['telephone1'],
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      syncStatus: map['syncStatus'],
+      syncStatus: map['syncStatus'] ?? 'local',
       deviceId: map['deviceId'],
+      statutBien: map['statutBien'],
     );
   }
 
@@ -102,11 +105,14 @@ class Pap {
       'updatedAt': updatedAt?.toIso8601String(),
       'syncStatus': syncStatus,
       'deviceId': deviceId,
+      'statutBien': statutBien,
     };
   }
 
   Pap copyWith({
     String? syncStatus,
+    String? deviceId,
+    String? statutBien,
   }) {
     return Pap(
       id: id,
@@ -131,7 +137,8 @@ class Pap {
       createdAt: createdAt,
       updatedAt: updatedAt,
       syncStatus: syncStatus ?? this.syncStatus,
-      deviceId: deviceId,
+      deviceId: deviceId ?? this.deviceId,
+      statutBien: statutBien ?? this.statutBien,
     );
   }
 }

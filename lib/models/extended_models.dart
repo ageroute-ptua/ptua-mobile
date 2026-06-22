@@ -5,6 +5,14 @@ class InfoLogement {
   final String? materiauMur;
   final String? materiauSol;
   final String? materiauToit;
+  final double? montantLoyer;
+  final String? nomProprietaire;
+  final String? contactProprietaire;
+  final String? dureeLocation;
+  final bool? aPayeCaution;
+  final int? moisCaution;
+  final double? montantCaution;
+  final String? modeAcquisitionTerrain;
   final String? syncStatus;
   final String? deviceId;
 
@@ -15,6 +23,14 @@ class InfoLogement {
     this.materiauMur,
     this.materiauSol,
     this.materiauToit,
+    this.montantLoyer,
+    this.nomProprietaire,
+    this.contactProprietaire,
+    this.dureeLocation,
+    this.aPayeCaution,
+    this.moisCaution,
+    this.montantCaution,
+    this.modeAcquisitionTerrain,
     this.syncStatus,
     this.deviceId,
   });
@@ -26,6 +42,14 @@ class InfoLogement {
     'materiauMur': materiauMur,
     'materiauSol': materiauSol,
     'materiauToit': materiauToit,
+    'montantLoyer': montantLoyer,
+    'nomProprietaire': nomProprietaire,
+    'contactProprietaire': contactProprietaire,
+    'dureeLocation': dureeLocation,
+    'aPayeCaution': aPayeCaution,
+    'moisCaution': moisCaution,
+    'montantCaution': montantCaution,
+    'modeAcquisitionTerrain': modeAcquisitionTerrain,
     'syncStatus': syncStatus,
     'deviceId': deviceId,
   };

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_helper.dart';
 
 class SecuriteAlimentaireFormScreen extends StatefulWidget {
   final String idMenage;
@@ -10,6 +11,8 @@ class SecuriteAlimentaireFormScreen extends StatefulWidget {
 
 class _SecuriteAlimentaireFormScreenState extends State<SecuriteAlimentaireFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _dbHelper = DatabaseHelper();
+  bool _isSaving = false;
 
   final _joursAlimentsMoinsChersController = TextEditingController();
   final _joursEmprunterNourritureController = TextEditingController();
@@ -19,8 +22,34 @@ class _SecuriteAlimentaireFormScreenState extends State<SecuriteAlimentaireFormS
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Données de sécurité alimentaire enregistrées.')));
-    Navigator.pop(context, true);
+    setState(() => _isSaving = true);
+    try {
+      await _dbHelper.insertSecuriteAlimentaire({
+        'idPap': widget.idMenage,
+        'joursAlimentsMoinsChers': int.tryParse(_joursAlimentsMoinsChersController.text) ?? 0,
+        'joursEmprunterNourriture': int.tryParse(_joursEmprunterNourritureController.text) ?? 0,
+        'joursLimiterQuantite': int.tryParse(_joursLimiterQuantiteController.text) ?? 0,
+        'joursRestreindreAdultes': int.tryParse(_joursRestreindreAdultesController.text) ?? 0,
+        'joursReduireRepas': int.tryParse(_joursReduireRepasController.text) ?? 0,
+        'joursManquerNourriture': 0,
+        'createdAt': DateTime.now().toIso8601String(),
+        'syncStatus': 'local',
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Données de sécurité alimentaire enregistrées !'), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Widget _buildDaysInput(String label, TextEditingController controller) {

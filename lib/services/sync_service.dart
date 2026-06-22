@@ -73,6 +73,7 @@ class SyncService {
         final sante = await _dbHelper.getSanteByPap(idPap);
         final education = await _dbHelper.getEducationByPap(idPap);
         final avis = await _dbHelper.getAvisProjetByPap(idPap);
+        final localisation = await _dbHelper.getLocalisationByPap(idPap);
 
         final payload = {
           'pap': pap.toMap()..remove('id')..remove('syncStatus'),
@@ -82,6 +83,7 @@ class SyncService {
           if (sante != null) 'sante': sante.toMap()..remove('idSante')..remove('syncStatus'),
           if (education != null) 'education': education.toMap()..remove('idEducation')..remove('syncStatus'),
           if (avis != null) 'avisProjet': avis.toMap()..remove('idAvis')..remove('syncStatus'),
+          if (localisation != null) 'localisation': localisation.toMap()..remove('idLocalisation')..remove('syncStatus'),
         };
         
         print('[SYNC] Envoi PAP: $idPap');
@@ -98,6 +100,7 @@ class SyncService {
           if (sante != null) await _dbHelper.insertSante(sante.copyWith(syncStatus: 'synced'));
           if (education != null) await _dbHelper.insertEducation(education.copyWith(syncStatus: 'synced'));
           if (avis != null) await _dbHelper.insertAvisProjet(avis.copyWith(syncStatus: 'synced'));
+          if (localisation != null) await _dbHelper.insertLocalisation(localisation.copyWith(syncStatus: 'synced'));
         } else {
           allSuccess = false;
         }

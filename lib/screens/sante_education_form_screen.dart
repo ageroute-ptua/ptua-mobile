@@ -22,11 +22,21 @@ class _SanteEducationFormScreenState extends State<SanteEducationFormScreen> {
   final _nbrPersMaladeController = TextEditingController();
   
   String? _isAssurance = 'Non';
-  String? _typeSoinMen = 'Hôpital public';
+  String? _typeSoinMen;
+  
+  // Nouveaux champs Sante
+  String? _aMaladieChronique = 'Non';
+  String? _laquelleMaladie;
 
   // Education
   final _nbEnftScolariseController = TextEditingController();
   final _distanceDomEcolePrimController = TextEditingController();
+  
+  // Nouveaux champs Education
+  String? _aEcoliersEtudiants = 'Non';
+  final _nbEcoliersController = TextEditingController();
+  final _nbElevesController = TextEditingController();
+  final _nbEtudiantsController = TextEditingController();
 
   void _saveData() async {
     if (_formKey.currentState!.validate()) {
@@ -88,6 +98,7 @@ class _SanteEducationFormScreenState extends State<SanteEducationFormScreen> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _isAssurance,
                 decoration: const InputDecoration(labelText: 'Avez-vous une assurance maladie ?'),
                 items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
@@ -115,11 +126,36 @@ class _SanteEducationFormScreenState extends State<SanteEducationFormScreen> {
                 decoration: const InputDecoration(labelText: 'Nombre de personnes malades récemment', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 16),
+              
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: _aMaladieChronique,
+                decoration: const InputDecoration(labelText: 'Un membre a-t-il un handicap ou maladie chronique ?'),
+                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (v) => setState(() => _aMaladieChronique = v),
+              ),
+              if (_aMaladieChronique == 'Oui') ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _laquelleMaladie,
+                  decoration: const InputDecoration(labelText: 'Lequel / Laquelle ?'),
+                  items: [
+                    'Handicap mental', 'Retard cognitif', 'Maladie chronique', 'Handicap moteur cérébral', 
+                    'Handicap membre', 'Visuel', 'Auditif/Verbal', 'Autre'
+                  ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                  onChanged: (v) => setState(() => _laquelleMaladie = v),
+                ),
+              ],
+              const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _typeSoinMen,
-                decoration: const InputDecoration(labelText: 'Lieu de soin principal'),
-                items: ['Hôpital public', 'Clinique privée', 'Tradipraticien', 'Automédication'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                decoration: const InputDecoration(labelText: 'Lieu de soin principal (Recours en priorité)'),
+                items: [
+                  'Centre Hospitalier Universitaire', 'Centre hospitalier régional', 'Hôpital militaire', 'Hôpital général', 'Centre de santé public', 'Centre de santé privée', 'Médecin libéral', 'Infirmière libérale', 'Pharmacien', 'Tradipraticien', 'Marabout/Féticheur', 'Auto-médication', 'Autre'
+                ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                 onChanged: (v) => setState(() => _typeSoinMen = v),
               ),
               
@@ -133,6 +169,35 @@ class _SanteEducationFormScreenState extends State<SanteEducationFormScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "Nombre d'enfants scolarisés", border: OutlineInputBorder()),
               ),
+              const SizedBox(height: 16),
+              
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: _aEcoliersEtudiants,
+                decoration: const InputDecoration(labelText: "Y a t-il des écoliers/élèves/étudiants dans votre ménage ?"),
+                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (v) => setState(() => _aEcoliersEtudiants = v),
+              ),
+              if (_aEcoliersEtudiants == 'Oui') ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _nbEcoliersController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Nombre d'écoliers", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _nbElevesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Nombre d'élèves", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _nbEtudiantsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Nombre d'étudiants", border: OutlineInputBorder()),
+                ),
+              ],
               const SizedBox(height: 16),
 
               TextField(

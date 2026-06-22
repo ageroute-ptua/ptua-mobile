@@ -3,11 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../models/enquete.dart';
-import '../models/localisation.dart';
 import '../services/database_helper.dart';
 import '../providers/navigation_provider.dart';
 
@@ -25,9 +25,11 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
   
   int _currentStep = 0;
   bool _isSaving = false;
+  bool _isLocating = false; // GPS en cours
 
   final _idEnqueteController = TextEditingController();
   final _communeCodeController = TextEditingController();
+  final _quartierCodeController = TextEditingController();
   final _enqueteurController = TextEditingController();
 
   File? _photoFile;
@@ -37,12 +39,51 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
   void initState() {
     super.initState();
     if (widget.enqueteToEdit != null) {
+      // Mode édition : pre-remplir les champs
       _idEnqueteController.text = widget.enqueteToEdit!.idEnquete;
       _communeCodeController.text = widget.enqueteToEdit!.communeCode ?? '';
+      _quartierCodeController.text = widget.enqueteToEdit!.quartierCode ?? '';
       _enqueteurController.text = widget.enqueteToEdit!.enqueteur ?? '';
       if (widget.enqueteToEdit!.photoPath != null && File(widget.enqueteToEdit!.photoPath!).existsSync()) {
         _photoFile = File(widget.enqueteToEdit!.photoPath!);
       }
+    } else {
+      // Nouvelle enquête : auto-détection GPS
+      _autoLocateEnquete();
+    }
+  }
+
+  /// Détecte automatiquement la position GPS et remplit Commune + Quartier
+  Future<void> _autoLocateEnquete() async {
+    setState(() => _isLocating = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10),
+        );
+        final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty && mounted) {
+          final place = placemarks.first;
+          // Commune = ville ou sous-région administrative
+          final commune = place.locality ?? place.subAdministrativeArea ?? place.administrativeArea ?? '';
+          // Quartier = sous-localité ou rue
+          final quartier = place.subLocality ?? place.thoroughfare ?? place.name ?? '';
+          setState(() {
+            if (commune.isNotEmpty) _communeCodeController.text = commune.toUpperCase();
+            if (quartier.isNotEmpty) _quartierCodeController.text = quartier;
+          });
+        }
+      }
+    } catch (e) {
+      // Silencieux - l'enquêteur peut remplir manuellement
+      debugPrint('GPS enquête non disponible: $e');
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
     }
   }
 
@@ -86,26 +127,17 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
     setState(() => _isSaving = true);
     
     try {
-      // 1. Demander la permission et récupérer le GPS
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      Position? position;
-      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      }
       
-      // 2. Traitement de la photo
       final newEnquete = Enquete(
         id: widget.enqueteToEdit?.id,
         idEnquete: _idEnqueteController.text.trim(),
         communeCode: _communeCodeController.text.trim(),
+        quartierCode: _quartierCodeController.text.trim(),
         enqueteur: _enqueteurController.text.trim(),
         dateEnquete: widget.enqueteToEdit?.dateEnquete ?? DateTime.now(),
         createdAt: widget.enqueteToEdit?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
-        syncStatus: 'local', // Toujours marquer comme 'local' après modification pour forcer la synchro
+        syncStatus: 'local',
         photoPath: _photoFile?.path,
         signaturePath: null,
       );
@@ -116,17 +148,6 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
         await _dbHelper.insertEnquete(newEnquete);
       }
 
-      if (position != null) {
-        final loc = Localisation(
-          idEnquete: newEnquete.idEnquete,
-          latitude: position.latitude,
-          longitude: position.longitude,
-          altitude: position.altitude,
-          precisionGps: position.accuracy,
-          createdAt: DateTime.now(),
-        );
-        await _dbHelper.insertLocalisation(loc);
-      }
 
       if (mounted) {
         setState(() => _isSaving = false);
@@ -140,14 +161,13 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
         if (widget.enqueteToEdit != null) {
           Navigator.pop(context);
         } else {
-          // Reset
           _idEnqueteController.clear();
           _communeCodeController.clear();
+          _quartierCodeController.clear();
           _enqueteurController.clear();
           _photoFile = null;
           setState(() => _currentStep = 0);
           
-          // Retour Dashboard
           ref.read(navigationProvider.notifier).state = 0;
         }
       }
@@ -157,154 +177,6 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
       }
     }
-  }
-
-  List<Step> getSteps() {
-    return [
-      Step(
-        state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-        isActive: _currentStep >= 0,
-        title: const Text("Identification", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          children: [
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _idEnqueteController, 
-              label: 'ID Enquête (Ex: ENQ-001)', 
-              icon: Icons.badge,
-              textCapitalization: TextCapitalization.characters,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'L\'ID de l\'enquête est requis';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _communeCodeController, 
-              label: 'Code Commune (Ex: COM-1)', 
-              icon: Icons.map,
-              textCapitalization: TextCapitalization.characters,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Le code commune est requis';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _enqueteurController, 
-              label: 'Nom de l\'enquêteur', 
-              icon: Icons.person,
-              textCapitalization: TextCapitalization.words,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s\-]'))],
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Le nom de l\'enquêteur est requis';
-                if (value.trim().length < 2) return 'Le nom doit faire au moins 2 caractères';
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-      Step(
-        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-        isActive: _currentStep >= 1,
-        title: const Text("Médias", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            const Text("Photo du Bâti", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF242A5D))),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 130,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: _pickImage,
-                        child: Center(
-                          child: _photoFile != null && (_photoFile!.path.endsWith('.jpg') || _photoFile!.path.endsWith('.png') || _photoFile!.path.endsWith('.jpeg'))
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Image.file(_photoFile!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: const Color(0xFFE1660B).withValues(alpha: 0.1), shape: BoxShape.circle),
-                                      child: Icon(_photoFile != null ? Icons.check_circle : Icons.camera_alt, size: 32, color: _photoFile != null ? Colors.green : const Color(0xFFE1660B)),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(_photoFile != null ? "Photo prête" : "Appareil photo", style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Container(
-                    height: 130,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: _pickFile,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: const Color(0xFF242A5D).withValues(alpha: 0.1), shape: BoxShape.circle),
-                                child: const Icon(Icons.folder_open, size: 32, color: Color(0xFF242A5D)),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text("Importer fichier", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (_photoFile != null)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _photoFile = null),
-                  icon: const Icon(Icons.clear, size: 18),
-                  label: const Text("Retirer le fichier"),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                ),
-              ),
-          ],
-        ),
-      ),
-    ];
   }
 
   @override
@@ -320,79 +192,137 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: Theme(
-          data: ThemeData(
-            colorScheme: ColorScheme.light(primary: const Color(0xFFE1660B)),
-          ),
-          child: Stepper(
-            type: StepperType.vertical,
-            currentStep: _currentStep,
-            steps: getSteps(),
-            physics: const BouncingScrollPhysics(),
-            onStepContinue: () {
-              final isLastStep = _currentStep == getSteps().length - 1;
-              
-              // Validation avant de changer d'étape
-              if (_currentStep == 0) {
-                if (!_formKey.currentState!.validate()) {
-                  return; // Bloquer si c'est invalide
-                }
-              }
-
-              if (isLastStep) {
-                _saveEnquete();
-              } else {
-                setState(() => _currentStep += 1);
-              }
-            },
-            onStepCancel: () {
-              if (_currentStep > 0) {
-                setState(() => _currentStep -= 1);
-              }
-            },
-            controlsBuilder: (context, details) {
-              final isLastStep = _currentStep == getSteps().length - 1;
-              return Container(
-                margin: const EdgeInsets.only(top: 32),
-                child: Row(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: _isSaving ? null : details.onStepContinue,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE1660B),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    const Text("Identification", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF242A5D))),
+                    const SizedBox(height: 12),
+                    
+                    // Indicateur GPS
+                    if (_isLocating)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF009E60).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF009E60).withValues(alpha: 0.3)),
                         ),
-                        child: _isSaving && isLastStep
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : Text(
-                                isLastStep ? 'ENREGISTRER' : 'SUIVANT', 
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                              ),
+                        child: const Row(
+                          children: [
+                            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF009E60))),
+                            SizedBox(width: 12),
+                            Text('Détection de la position GPS...', style: TextStyle(color: Color(0xFF009E60), fontWeight: FontWeight.w500, fontSize: 13)),
+                          ],
+                        ),
                       ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: _idEnqueteController, 
+                      label: 'ID Enquête (Ex: ENQ-001)', 
+                      icon: Icons.badge,
+                      textCapitalization: TextCapitalization.characters,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'L\'ID de l\'enquête est requis';
+                        return null;
+                      },
                     ),
-                    if (_currentStep > 0) ...[
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: OutlinedButton(
-                          onPressed: _isSaving ? null : details.onStepCancel,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            side: const BorderSide(color: Colors.grey),
-                          ),
-                          child: const Text('RETOUR', style: TextStyle(color: Colors.grey)),
-                        ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _communeCodeController, 
+                      label: 'Commune', 
+                      icon: Icons.map,
+                      textCapitalization: TextCapitalization.characters,
+                      suffixIcon: IconButton(
+                        icon: _isLocating 
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF009E60)))
+                          : const Icon(Icons.my_location, color: Color(0xFFE1660B), size: 20),
+                        tooltip: 'Actualiser la position GPS',
+                        onPressed: _isLocating ? null : _autoLocateEnquete,
                       ),
-                    ],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'La commune est requise';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _quartierCodeController, 
+                      label: 'Ville', 
+                      icon: Icons.location_city,
+                      textCapitalization: TextCapitalization.words,
+                      suffixIcon: const Icon(Icons.location_on, color: Color(0xFF009E60), size: 20),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _enqueteurController, 
+                      label: 'Nom de l\'enquêteur', 
+                      icon: Icons.person,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s\-]'))],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'Le nom de l\'enquêteur est requis';
+                        if (value.trim().length < 2) return 'Le nom doit faire au moins 2 caractères';
+                        return null;
+                      },
+                    ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))],
+              ),
+              child: SafeArea(
+                child: Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE1660B), Color(0xFFFF9800)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE1660B).withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _saveEnquete,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: _isSaving 
+                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.save_rounded, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('ENREGISTRER L\'ENQUÊTE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.1)),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -405,17 +335,14 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
     TextCapitalization textCapitalization = TextCapitalization.none,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    Widget? suffixIcon,
   }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: TextFormField(
@@ -426,18 +353,10 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
           labelText: label,
           labelStyle: const TextStyle(color: Colors.grey),
           prefixIcon: Icon(icon, color: const Color(0xFFE1660B)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE1660B), width: 1.5),
-          ),
+          suffixIcon: suffixIcon,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE1660B), width: 1.5)),
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),

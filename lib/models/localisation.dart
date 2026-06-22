@@ -1,6 +1,6 @@
 class Localisation {
   final int? idLocalisation;
-  final String idEnquete;
+  final String idPap;
   final double? latitude;
   final double? longitude;
   final double? altitude;
@@ -11,7 +11,7 @@ class Localisation {
 
   Localisation({
     this.idLocalisation,
-    required this.idEnquete,
+    required this.idPap,
     this.latitude,
     this.longitude,
     this.altitude,
@@ -24,7 +24,7 @@ class Localisation {
   factory Localisation.fromMap(Map<String, dynamic> map) {
     return Localisation(
       idLocalisation: map['idLocalisation'],
-      idEnquete: map['idEnquete'],
+      idPap: map['idPap'],
       latitude: map['latitude'],
       longitude: map['longitude'],
       altitude: map['altitude'],
@@ -38,7 +38,7 @@ class Localisation {
   Map<String, dynamic> toMap() {
     return {
       'idLocalisation': idLocalisation,
-      'idEnquete': idEnquete,
+      'idPap': idPap,
       'latitude': latitude,
       'longitude': longitude,
       'altitude': altitude,
@@ -52,7 +52,7 @@ class Localisation {
   Localisation copyWith({String? syncStatus}) {
     return Localisation(
       idLocalisation: idLocalisation,
-      idEnquete: idEnquete,
+      idPap: idPap,
       latitude: latitude,
       longitude: longitude,
       altitude: altitude,

@@ -20,6 +20,15 @@ class _MenageFormScreenState extends State<MenageFormScreen> {
   String? _isChefMen = 'Oui';
   String? _isPersonneVulMenage = 'Non';
   String? _typeSanitaire = 'W-C Chasse';
+  String? _typeMenage;
+  
+  // Skip logic organisation
+  String? _isMembreOrganisation = 'Non';
+  String? _typeOrganisation;
+  
+  // Skip logic retraite
+  String? _toucheRetraite = 'Non';
+  final _montantRetraiteController = TextEditingController();
 
   void _saveMenage() async {
     if (_formKey.currentState!.validate()) {
@@ -67,6 +76,7 @@ class _MenageFormScreenState extends State<MenageFormScreen> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _isChefMen,
                 decoration: const InputDecoration(labelText: 'Êtes-vous chef de ménage ?'),
                 items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
@@ -75,6 +85,23 @@ class _MenageFormScreenState extends State<MenageFormScreen> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: _typeMenage,
+                decoration: const InputDecoration(labelText: 'Type de Ménage'),
+                items: [
+                  'Ménage composé d\'une seule personne',
+                  'Ménage composé d\'un couple sans enfant',
+                  'Ménage composé d\'un couple et d\'enfants',
+                  'Ménage monoparental',
+                  'Ménage polygamique',
+                  'Ménage comprenant la famille étendue'
+                ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (v) => setState(() => _typeMenage = v),
+              ),
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _isPersonneVulMenage,
                 decoration: const InputDecoration(labelText: 'Y a-t-il une personne vulnérable ?'),
                 items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
@@ -82,13 +109,50 @@ class _MenageFormScreenState extends State<MenageFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              TextField(
-                controller: _appartenanceOrgController,
-                decoration: const InputDecoration(labelText: "Membre d'une organisation (Précisez)", border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: _isMembreOrganisation,
+                decoration: const InputDecoration(labelText: "Faites-vous partie d'une organisation ?"),
+                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (v) => setState(() => _isMembreOrganisation = v),
               ),
+              if (_isMembreOrganisation == 'Oui') ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _typeOrganisation,
+                  decoration: const InputDecoration(labelText: 'Précisez l\'organisation'),
+                  items: ['Mutuelle de développement', 'Association du quartier', 'Coopérative agricole', 'Autres']
+                      .map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                  onChanged: (v) => setState(() => _typeOrganisation = v),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _appartenanceOrgController,
+                  decoration: const InputDecoration(labelText: "Si Autre, précisez le nom", border: OutlineInputBorder()),
+                ),
+              ],
+              const SizedBox(height: 16),
+              
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: _toucheRetraite,
+                decoration: const InputDecoration(labelText: 'Le chef de ménage touche-t-il une retraite ?'),
+                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (v) => setState(() => _toucheRetraite = v),
+              ),
+              if (_toucheRetraite == 'Oui') ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _montantRetraiteController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Montant annuel de la retraite (FCFA)", border: OutlineInputBorder()),
+                ),
+              ],
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _typeSanitaire,
                 decoration: const InputDecoration(labelText: 'Type de Sanitaire'),
                 items: ['W-C Chasse', 'Latrine', 'Fosse Septique', 'Dans la nature'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),

@@ -8,12 +8,16 @@ import 'package:geolocator/geolocator.dart';
 import '../models/localisation.dart';
 import '../models/enquete.dart';
 import '../services/database_helper.dart';
+import 'package:geocoding/geocoding.dart';
+
+import '../models/pap.dart';
 
 class MapMarkerData {
   final Localisation loc;
+  final Pap pap;
   final Enquete enquete;
 
-  MapMarkerData(this.loc, this.enquete);
+  MapMarkerData(this.loc, this.pap, this.enquete);
 }
 
 class MapScreen extends StatefulWidget {
@@ -91,19 +95,23 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _loadLocalisations() async {
     final locs = await _dbHelper.getAllLocalisations();
+    final paps = await _dbHelper.getPaps();
     final enquetes = await _dbHelper.getEnquetes();
-    
     final Map<String, Enquete> enqueteMap = { for (var e in enquetes) e.idEnquete: e };
+    final Map<String, Pap> papMap = { for (var p in paps) p.identifiantPap!: p };
     
     List<MapMarkerData> markers = [];
     Set<String> communesSet = {};
 
     for (var loc in locs) {
-      if (enqueteMap.containsKey(loc.idEnquete)) {
-        final enq = enqueteMap[loc.idEnquete]!;
-        markers.add(MapMarkerData(loc, enq));
-        if (enq.communeCode != null && enq.communeCode!.isNotEmpty) {
-          communesSet.add(enq.communeCode!);
+      if (papMap.containsKey(loc.idPap)) {
+        final pap = papMap[loc.idPap]!;
+        if (enqueteMap.containsKey(pap.idEnquete)) {
+          final enq = enqueteMap[pap.idEnquete]!;
+          markers.add(MapMarkerData(loc, pap, enq));
+          if (enq.communeCode != null && enq.communeCode!.isNotEmpty) {
+            communesSet.add(enq.communeCode!);
+          }
         }
       }
     }
@@ -121,7 +129,8 @@ class _MapScreenState extends State<MapScreen> {
   void _applyFilters() {
     setState(() {
       _filteredMarkers = _allMarkers.where((m) {
-        final matchesSearch = m.enquete.idEnquete.toLowerCase().contains(_searchQuery.toLowerCase());
+        final matchesSearch = m.pap.identifiantPap!.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+                              m.pap.nomPap.toLowerCase().contains(_searchQuery.toLowerCase());
         final matchesCommune = _selectedCommune == null || _selectedCommune == 'Toutes' || m.enquete.communeCode == _selectedCommune;
         return matchesSearch && matchesCommune;
       }).toList();
@@ -160,7 +169,10 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _showMarkerDetails(Localisation loc) {
+  void _showMarkerDetails(MapMarkerData m) {
+    final loc = m.loc;
+    final pap = m.pap;
+    final enq = m.enquete;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -202,17 +214,22 @@ class _MapScreenState extends State<MapScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          loc.idEnquete,
+                          pap.nomPap,
                           style: TextStyle(
-                            fontSize: 22, 
+                            fontSize: 20, 
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : const Color(0xFF242A5D),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Enquête localisée",
+                          "ID: ${pap.identifiantPap} | CNI: ${pap.numPiece ?? 'N/A'}",
                           style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Enquête: ${enq.idEnquete}",
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
                         ),
                       ],
                     ),
@@ -349,7 +366,7 @@ class _MapScreenState extends State<MapScreen> {
                                   width: 50,
                                   height: 50,
                                   child: GestureDetector(
-                                    onTap: () => _showMarkerDetails(m.loc),
+                                    onTap: () => _showMarkerDetails(m),
                                     child: const Icon(
                                       Icons.location_pin,
                                       color: Color(0xFFE1660B),
@@ -406,8 +423,19 @@ class _MapScreenState extends State<MapScreen> {
                         heroTag: 'mapCenterFab',
                         mini: true,
                         backgroundColor: Theme.of(context).cardColor,
-                        onPressed: _fitBounds,
-                        child: const Icon(Icons.center_focus_strong, color: Color(0xFFE1660B)),
+                        onPressed: () {
+                          if (_currentPosition != null) {
+                            _mapController.move(
+                              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                              15.0,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Position GPS introuvable ou en cours de recherche...")),
+                            );
+                          }
+                        },
+                        child: const Icon(Icons.my_location, color: Color(0xFFE1660B)),
                       ),
                       const SizedBox(height: 8),
                       FloatingActionButton(
@@ -559,13 +587,32 @@ class _MapScreenState extends State<MapScreen> {
                               child: Text(c, overflow: TextOverflow.ellipsis),
                             );
                           }).toList(),
-                          onChanged: (val) {
+                          onChanged: (val) async {
                             setState(() {
                               _selectedCommune = val;
                               _applyFilters();
                             });
                             if (val != null && val != 'Toutes') {
-                              _fitBounds();
+                              if (_filteredMarkers.isNotEmpty) {
+                                _fitBounds();
+                              } else {
+                                try {
+                                  String query = "$val, ${_selectedVille ?? ''}, Côte d'Ivoire";
+                                  List<Location> locations = await locationFromAddress(query);
+                                  if (locations.isNotEmpty) {
+                                    _mapController.move(LatLng(locations.first.latitude, locations.first.longitude), 13.0);
+                                  }
+                                } catch (e) {
+                                  debugPrint("Erreur geocoding commune: $e");
+                                }
+                              }
+                            } else {
+                              if (_selectedVille != null && _selectedVille != 'Toutes') {
+                                final center = _villesData[_selectedVille]!['center'] as LatLng;
+                                _mapController.move(center, 12.0);
+                              } else {
+                                _fitBounds();
+                              }
                             }
                           },
                         ),

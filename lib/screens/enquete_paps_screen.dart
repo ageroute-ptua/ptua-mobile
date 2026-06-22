@@ -129,57 +129,72 @@ class _EnquetePapsScreenState extends State<EnquetePapsScreen> {
           ),
           Expanded(
             child: _filteredPaps.isEmpty
-                ? const Center(child: Text("Aucun PAP trouvé."))
-                : ListView.builder(
-                    itemCount: _filteredPaps.length,
-                    itemBuilder: (context, index) {
-                      final pap = _filteredPaps[index];
-                      final isSynced = pap.syncStatus == 'synced';
-                      
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          leading: Icon(
-                            isSynced ? Icons.cloud_done : Icons.cloud_off,
-                            color: isSynced ? Colors.green : Colors.orange,
+                ? RefreshIndicator(
+                    onRefresh: _loadPaps,
+                    color: const Color(0xFFE1660B),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 200),
+                        Center(child: Text("Aucun PAP trouvé.")),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadPaps,
+                    color: const Color(0xFFE1660B),
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: _filteredPaps.length,
+                      itemBuilder: (context, index) {
+                        final pap = _filteredPaps[index];
+                        final isSynced = pap.syncStatus == 'synced';
+                        
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: ListTile(
+                            leading: Icon(
+                              isSynced ? Icons.cloud_done : Icons.cloud_off,
+                              color: isSynced ? Colors.green : Colors.orange,
+                            ),
+                            title: Text(pap.nomPap, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('ID: ${pap.identifiantPap ?? "N/A"}'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                PopupMenuButton<String>(
+                                  icon: Icon(Icons.more_vert, color: Colors.grey[400]),
+                                  onSelected: (value) {
+                                    if (value == 'delete') {
+                                      _confirmDeletePap(pap);
+                                    } else if (value == 'edit') {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('La modification se fait en cliquant sur le PAP.'))
+                                      );
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Text('Modifier')),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                              ],
+                            ),
+                            onTap: () {
+                              // Ouvre le Dashboard pour éditer toutes les sections du PAP
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => PapDashboardScreen(pap: pap)),
+                              ).then((_) => _loadPaps());
+                            },
                           ),
-                          title: Text(pap.nomPap, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('ID: ${pap.identifiantPap ?? "N/A"}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              PopupMenuButton<String>(
-                                icon: Icon(Icons.more_vert, color: Colors.grey[400]),
-                                onSelected: (value) {
-                                  if (value == 'delete') {
-                                    _confirmDeletePap(pap);
-                                  } else if (value == 'edit') {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('La modification se fait en cliquant sur le PAP.'))
-                                    );
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Supprimer', style: TextStyle(color: Colors.red)),
-                                  ),
-                                ],
-                              ),
-                              const Icon(Icons.arrow_forward_ios, size: 16),
-                            ],
-                          ),
-                          onTap: () {
-                            // Ouvre le Dashboard pour éditer toutes les sections du PAP
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => PapDashboardScreen(pap: pap)),
-                            ).then((_) => _loadPaps());
-                          },
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],

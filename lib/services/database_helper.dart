@@ -25,10 +25,11 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'ptua_database_v2.db');
+    // v4: fixed FOREIGN KEY bug in localisations table
+    String path = join(await getDatabasesPath(), 'ptua_database_v4.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 5,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -41,6 +42,10 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE enquetes ADD COLUMN photoPath TEXT;');
       await db.execute('ALTER TABLE enquetes ADD COLUMN signaturePath TEXT;');
+    }
+    if (oldVersion < 5) {
+      // Add statutBien column which was missing
+      await db.execute('ALTER TABLE paps ADD COLUMN statutBien TEXT;');
     }
   }
 
@@ -92,6 +97,7 @@ class DatabaseHelper {
         updatedAt TEXT,
         syncStatus TEXT,
         deviceId TEXT,
+        statutBien TEXT,
         FOREIGN KEY (idEnquete) REFERENCES enquetes (idEnquete) ON DELETE CASCADE
       )
     ''');
@@ -210,7 +216,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE localisations(
         idLocalisation INTEGER PRIMARY KEY AUTOINCREMENT,
-        idEnquete TEXT UNIQUE,
+        idPap TEXT NOT NULL UNIQUE,
         latitude REAL,
         longitude REAL,
         altitude REAL,
@@ -218,7 +224,7 @@ class DatabaseHelper {
         createdAt TEXT,
         updatedAt TEXT,
         syncStatus TEXT,
-        FOREIGN KEY (idEnquete) REFERENCES enquetes (idEnquete) ON DELETE CASCADE
+        FOREIGN KEY (idPap) REFERENCES paps (identifiantPap) ON DELETE CASCADE
       )
     ''');
 
@@ -233,6 +239,95 @@ class DatabaseHelper {
         updatedAt TEXT,
         syncStatus TEXT,
         deviceId TEXT,
+        FOREIGN KEY (idPap) REFERENCES paps (identifiantPap) ON DELETE CASCADE
+      )
+    ''');
+
+    // AGRICULTURE / PARCELLE
+    await db.execute('''
+      CREATE TABLE agricultures(
+        idAgriculture INTEGER PRIMARY KEY AUTOINCREMENT,
+        idPap TEXT UNIQUE,
+        aParcelles INTEGER,
+        typeCulture TEXT,
+        modeAcquisition TEXT,
+        exploiteSoiMeme INTEGER,
+        localisationParcelles TEXT,
+        aAnimaux INTEGER,
+        nbBovins INTEGER,
+        nbOvins INTEGER,
+        nbVolailles INTEGER,
+        elevageCommercial INTEGER,
+        createdAt TEXT,
+        syncStatus TEXT,
+        FOREIGN KEY (idPap) REFERENCES paps (identifiantPap) ON DELETE CASCADE
+      )
+    ''');
+
+    // FINANCE
+    await db.execute('''
+      CREATE TABLE finances(
+        idFinance INTEGER PRIMARY KEY AUTOINCREMENT,
+        idPap TEXT UNIQUE,
+        aCompteBanque INTEGER,
+        pratiqueTontine INTEGER,
+        recoitAideFinanciere INTEGER,
+        montantAide REAL,
+        aDesCredits INTEGER,
+        institutionCredit TEXT,
+        raisonCredit TEXT,
+        statutCredit TEXT,
+        montantCredit REAL,
+        createdAt TEXT,
+        syncStatus TEXT,
+        FOREIGN KEY (idPap) REFERENCES paps (identifiantPap) ON DELETE CASCADE
+      )
+    ''');
+
+    // SECURITE ALIMENTAIRE
+    await db.execute('''
+      CREATE TABLE securite_alimentaires(
+        idSecAlim INTEGER PRIMARY KEY AUTOINCREMENT,
+        idPap TEXT UNIQUE,
+        joursAlimentsMoinsChers INTEGER,
+        joursEmprunterNourriture INTEGER,
+        joursLimiterQuantite INTEGER,
+        joursRestreindreAdultes INTEGER,
+        joursReduireRepas INTEGER,
+        joursManquerNourriture INTEGER,
+        createdAt TEXT,
+        syncStatus TEXT,
+        FOREIGN KEY (idPap) REFERENCES paps (identifiantPap) ON DELETE CASCADE
+      )
+    ''');
+    // LOGEMENT
+    await db.execute('''
+      CREATE TABLE logements(
+        idLogement INTEGER PRIMARY KEY AUTOINCREMENT,
+        idPap TEXT UNIQUE,
+        statutOccupation TEXT,
+        typeBatiment TEXT,
+        materiauMur TEXT,
+        materiauSol TEXT,
+        materiauToit TEXT,
+        sourceEau TEXT,
+        typeToilette TEXT,
+        energieCuisson TEXT,
+        energieEclairage TEXT,
+        nbPieces INTEGER,
+        montantLoyer REAL,
+        nomProprietaire TEXT,
+        contactProprietaire TEXT,
+        dureeLocation TEXT,
+        aPayeCaution INTEGER,
+        moisCaution INTEGER,
+        montantCaution REAL,
+        modeAcquisitionTerrain TEXT,
+        aMisEnLocation TEXT,
+        nbMoisLocation INTEGER,
+        revenusLocation REAL,
+        createdAt TEXT,
+        syncStatus TEXT,
         FOREIGN KEY (idPap) REFERENCES paps (identifiantPap) ON DELETE CASCADE
       )
     ''');
@@ -275,6 +370,12 @@ class DatabaseHelper {
   Future<List<Pap>> getPapsForEnquete(String idEnquete) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('paps', where: 'idEnquete = ?', whereArgs: [idEnquete]);
+    return maps.map((map) => Pap.fromMap(map)).toList();
+  }
+
+  Future<List<Pap>> getPaps() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('paps');
     return maps.map((map) => Pap.fromMap(map)).toList();
   }
 
@@ -360,9 +461,9 @@ class DatabaseHelper {
     return await db.insert('localisations', loc.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<Localisation?> getLocalisationByEnquete(String idEnquete) async {
+  Future<Localisation?> getLocalisationByPap(String idPap) async {
     final db = await database;
-    final maps = await db.query('localisations', where: 'idEnquete = ?', whereArgs: [idEnquete]);
+    final maps = await db.query('localisations', where: 'idPap = ?', whereArgs: [idPap]);
     if (maps.isNotEmpty) return Localisation.fromMap(maps.first);
     return null;
   }
@@ -382,5 +483,75 @@ class DatabaseHelper {
     final db = await database;
     final maps = await db.query('documents', where: 'idPap = ?', whereArgs: [idPap]);
     return maps.map((map) => Document.fromMap(map)).toList();
+  }
+
+  // --- CRUD AGRICULTURE ---
+  Future<int> insertAgriculture(Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.insert('agricultures', data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Map<String, dynamic>?> getAgricultureByPap(String idPap) async {
+    final db = await database;
+    final maps = await db.query('agricultures', where: 'idPap = ?', whereArgs: [idPap]);
+    return maps.isNotEmpty ? maps.first : null;
+  }
+
+  // --- CRUD FINANCE ---
+  Future<int> insertFinance(Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.insert('finances', data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Map<String, dynamic>?> getFinanceByPap(String idPap) async {
+    final db = await database;
+    final maps = await db.query('finances', where: 'idPap = ?', whereArgs: [idPap]);
+    return maps.isNotEmpty ? maps.first : null;
+  }
+
+  // --- CRUD SECURITE ALIMENTAIRE ---
+  Future<int> insertSecuriteAlimentaire(Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.insert('securite_alimentaires', data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Map<String, dynamic>?> getSecuriteAlimentaireByPap(String idPap) async {
+    final db = await database;
+    final maps = await db.query('securite_alimentaires', where: 'idPap = ?', whereArgs: [idPap]);
+    return maps.isNotEmpty ? maps.first : null;
+  }
+
+  // --- CRUD LOGEMENT ---
+  Future<int> insertLogement(Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.insert('logements', data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Map<String, dynamic>?> getLogementByPap(String idPap) async {
+    final db = await database;
+    final maps = await db.query('logements', where: 'idPap = ?', whereArgs: [idPap]);
+    return maps.isNotEmpty ? maps.first : null;
+  }
+
+  // --- Completion check ---
+  Future<Map<String, bool>> getPapCompletionStatus(String idPap) async {
+    final menage = await getMenageByPap(idPap);
+    final logement = await getLogementByPap(idPap);
+    final activite = await getActiviteByPap(idPap);
+    final sante = await getSanteByPap(idPap);
+    final education = await getEducationByPap(idPap);
+    final avis = await getAvisProjetByPap(idPap);
+    final agriculture = await getAgricultureByPap(idPap);
+    final finance = await getFinanceByPap(idPap);
+    return {
+      'menage': menage != null,
+      'logement': logement != null,
+      'activite': activite != null,
+      'sante': sante != null,
+      'education': education != null,
+      'avis': avis != null,
+      'agriculture': agriculture != null,
+      'finance': finance != null,
+    };
   }
 }

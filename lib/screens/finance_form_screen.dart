@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_helper.dart';
 
 class FinanceFormScreen extends StatefulWidget {
   final String idMenage;
@@ -10,6 +11,8 @@ class FinanceFormScreen extends StatefulWidget {
 
 class _FinanceFormScreenState extends State<FinanceFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _dbHelper = DatabaseHelper();
+  bool _isSaving = false;
 
   // Finances
   bool _recoitAideFinanciere = false;
@@ -19,13 +22,44 @@ class _FinanceFormScreenState extends State<FinanceFormScreen> {
   
   // Crédit
   bool _aDesCredits = false;
-  final _institutionCreditController = TextEditingController();
+  String? _institutionCredit;
+  String? _raisonCredit;
+  String? _statutCredit;
   final _montantCreditController = TextEditingController();
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Données financières enregistrées.')));
-    Navigator.pop(context, true);
+    setState(() => _isSaving = true);
+    try {
+      await _dbHelper.insertFinance({
+        'idPap': widget.idMenage,
+        'aCompteBanque': _aCompteBanque ? 1 : 0,
+        'pratiqueTontine': _pratiqueTontine ? 1 : 0,
+        'recoitAideFinanciere': _recoitAideFinanciere ? 1 : 0,
+        'montantAide': double.tryParse(_montantAideController.text) ?? 0.0,
+        'aDesCredits': _aDesCredits ? 1 : 0,
+        'institutionCredit': _institutionCredit,
+        'raisonCredit': _raisonCredit,
+        'statutCredit': _statutCredit,
+        'montantCredit': double.tryParse(_montantCreditController.text) ?? 0.0,
+        'createdAt': DateTime.now().toIso8601String(),
+        'syncStatus': 'local',
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Données financières enregistrées !'), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -38,7 +72,7 @@ class _FinanceFormScreenState extends State<FinanceFormScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              const Text('INFORMATIONS FINANCIÈRES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo)),
+              const Text('INFORMATIONS FINANCIÈRES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF77F00))),
               const SizedBox(height: 16),
               
               SwitchListTile(
@@ -65,7 +99,7 @@ class _FinanceFormScreenState extends State<FinanceFormScreen> {
 
               const Divider(height: 40, thickness: 2),
               
-              const Text('CRÉDITS EN COURS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo)),
+              const Text('CRÉDITS EN COURS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF77F00))),
               const SizedBox(height: 16),
               SwitchListTile(
                 title: const Text('Avez-vous un crédit en cours de remboursement ?'),
@@ -73,9 +107,31 @@ class _FinanceFormScreenState extends State<FinanceFormScreen> {
                 onChanged: (v) => setState(() => _aDesCredits = v),
               ),
               if (_aDesCredits) ...[
-                TextFormField(
-                  controller: _institutionCreditController,
-                  decoration: const InputDecoration(labelText: 'Institution (Banque, Microfinance, Particulier)'),
+                DropdownButtonFormField<String>(
+                isExpanded: true,
+                  value: _institutionCredit,
+                  decoration: const InputDecoration(labelText: 'Institution de crédit'),
+                  items: ['Banque', 'Institution de Microfinance', 'Commerçant', 'Chef de tontine', 'Acheteur d\'or', 'Ami', 'Famille', 'Groupement/association', 'Autre']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: (v) => setState(() => _institutionCredit = v),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                isExpanded: true,
+                  value: _raisonCredit,
+                  decoration: const InputDecoration(labelText: 'Pour quelle raison ?'),
+                  items: ['Evènement social', 'Maladie', 'Rentrée scolaire', 'Commerce', 'Agriculture', 'Construction', 'Autre']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: (v) => setState(() => _raisonCredit = v),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                isExpanded: true,
+                  value: _statutCredit,
+                  decoration: const InputDecoration(labelText: 'Statut actuel du crédit'),
+                  items: ['Remboursé', 'En cours de remboursement', 'Retard']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: (v) => setState(() => _statutCredit = v),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
