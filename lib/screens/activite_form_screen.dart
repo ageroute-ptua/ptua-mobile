@@ -41,8 +41,20 @@ class _ActiviteFormScreenState extends State<ActiviteFormScreen> {
         transferArg: _transferArg == 'Oui',
         lieuTravail: _lieuTravailController.text,
         presenceActivSecondMenage: _presenceActivSecondMenage == 'Oui',
+        activiteSecondaire: _presenceActivSecondMenage == 'Oui'
+            ? _activiteSecondaireController.text
+            : null,
         revenuCumul: double.tryParse(_revenuCumulController.text),
         isParcelleHorsEmprise: _isParcelleHorsEmprise == 'Oui',
+        aEmployes: _aEmployes == 'Oui',
+        nbEmployes: _aEmployes == 'Oui'
+            ? int.tryParse(_nbEmployesController.text)
+            : null,
+        payeTaxes: _payeTaxes == 'Oui',
+        quellesTaxes: _payeTaxes == 'Oui'
+            ? _quellesTaxesController.text
+            : null,
+        frequenceTaxes: _payeTaxes == 'Oui' ? _frequenceTaxes : null,
         createdAt: DateTime.now(),
         syncStatus: 'local',
       );
@@ -57,6 +69,7 @@ class _ActiviteFormScreenState extends State<ActiviteFormScreen> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

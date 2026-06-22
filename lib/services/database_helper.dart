@@ -29,7 +29,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'ptua_database_v4.db');
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -53,6 +53,15 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE menages ADD COLUMN typeOrganisation TEXT;');
       await db.execute('ALTER TABLE menages ADD COLUMN toucheRetraite INTEGER DEFAULT 0;');
       await db.execute('ALTER TABLE menages ADD COLUMN montantRetraite REAL;');
+    }
+    if (oldVersion < 7) {
+      // Add missing activite fields
+      await db.execute('ALTER TABLE activites ADD COLUMN activiteSecondaire TEXT;');
+      await db.execute('ALTER TABLE activites ADD COLUMN aEmployes INTEGER DEFAULT 0;');
+      await db.execute('ALTER TABLE activites ADD COLUMN nbEmployes INTEGER;');
+      await db.execute('ALTER TABLE activites ADD COLUMN payeTaxes INTEGER DEFAULT 0;');
+      await db.execute('ALTER TABLE activites ADD COLUMN quellesTaxes TEXT;');
+      await db.execute('ALTER TABLE activites ADD COLUMN frequenceTaxes TEXT;');
     }
   }
 
@@ -142,8 +151,14 @@ class DatabaseHelper {
         transferArg INTEGER,
         lieuTravail TEXT,
         presenceActivSecondMenage INTEGER,
+        activiteSecondaire TEXT,
         revenuCumul REAL,
         isParcelleHorsEmprise INTEGER,
+        aEmployes INTEGER DEFAULT 0,
+        nbEmployes INTEGER,
+        payeTaxes INTEGER DEFAULT 0,
+        quellesTaxes TEXT,
+        frequenceTaxes TEXT,
         createdAt TEXT,
         updatedAt TEXT,
         syncStatus TEXT,
