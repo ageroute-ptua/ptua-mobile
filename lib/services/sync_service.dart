@@ -95,12 +95,12 @@ class SyncService {
           for (var sd in syncedDocs) {
             await _dbHelper.insertDocument(sd);
           }
-          if (menage != null) await _dbHelper.insertMenage(menage.copyWith(syncStatus: 'synced'));
-          if (activite != null) await _dbHelper.insertActivite(activite.copyWith(syncStatus: 'synced'));
-          if (sante != null) await _dbHelper.insertSante(sante.copyWith(syncStatus: 'synced'));
-          if (education != null) await _dbHelper.insertEducation(education.copyWith(syncStatus: 'synced'));
-          if (avis != null) await _dbHelper.insertAvisProjet(avis.copyWith(syncStatus: 'synced'));
-          if (localisation != null) await _dbHelper.insertLocalisation(localisation.copyWith(syncStatus: 'synced'));
+          if (menage != null) await _dbHelper.insertMenage(menage);
+          if (activite != null) await _dbHelper.insertActivite(activite);
+          if (sante != null) await _dbHelper.insertSante(sante);
+          if (education != null) await _dbHelper.insertEducation(education);
+          if (avis != null) await _dbHelper.insertAvisProjet(avis);
+          if (localisation != null) await _dbHelper.insertLocalisation(localisation);
         } else {
           allSuccess = false;
         }

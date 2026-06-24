@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/custom_dropdown.dart';
+import '../widgets/premium_single_select.dart';
+import '../widgets/premium_multi_select.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
@@ -15,9 +18,11 @@ import '../models/pap.dart';
 class MapMarkerData {
   final Localisation loc;
   final Pap pap;
-  final Enquete enquete;
+  final Enquete? enquete;
+  String? resolvedCommune;
+  String? resolvedVille;
 
-  MapMarkerData(this.loc, this.pap, this.enquete);
+  MapMarkerData(this.loc, this.pap, this.enquete, {this.resolvedCommune, this.resolvedVille});
 }
 
 class MapScreen extends StatefulWidget {
@@ -106,12 +111,10 @@ class _MapScreenState extends State<MapScreen> {
     for (var loc in locs) {
       if (papMap.containsKey(loc.idPap)) {
         final pap = papMap[loc.idPap]!;
-        if (enqueteMap.containsKey(pap.idEnquete)) {
-          final enq = enqueteMap[pap.idEnquete]!;
-          markers.add(MapMarkerData(loc, pap, enq));
-          if (enq.communeCode != null && enq.communeCode!.isNotEmpty) {
-            communesSet.add(enq.communeCode!);
-          }
+        final enq = enqueteMap[pap.idEnquete];
+        markers.add(MapMarkerData(loc, pap, enq));
+        if (enq != null && enq.communeCode != null && enq.communeCode!.isNotEmpty) {
+          communesSet.add(enq.communeCode!);
         }
       }
     }
@@ -124,16 +127,74 @@ class _MapScreenState extends State<MapScreen> {
         _isLoading = false;
       });
     }
+
+    // Reverse geocode en arriere plan pour ameliorer le filtre
+    for (var m in markers) {
+      if (m.loc.latitude != null && m.loc.longitude != null) {
+        try {
+          final placemarks = await placemarkFromCoordinates(m.loc.latitude!, m.loc.longitude!);
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            m.resolvedCommune = p.subLocality ?? p.locality;
+            m.resolvedVille = p.administrativeArea ?? p.locality;
+            if (m.resolvedCommune != null && m.resolvedCommune!.isNotEmpty && !communesSet.contains(m.resolvedCommune)) {
+              communesSet.add(m.resolvedCommune!);
+            }
+          }
+        } catch (e) {
+          debugPrint("Erreur reverse geocoding map: $e");
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _communes = communesSet.toList()..sort();
+        _applyFilters();
+      });
+    }
   }
 
   void _applyFilters() {
     setState(() {
       _filteredMarkers = _allMarkers.where((m) {
-        final matchesSearch = m.pap.identifiantPap!.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-                              m.pap.nomPap.toLowerCase().contains(_searchQuery.toLowerCase());
-        final matchesCommune = _selectedCommune == null || _selectedCommune == 'Toutes' || m.enquete.communeCode == _selectedCommune;
-        return matchesSearch && matchesCommune;
+        final papId = m.pap.identifiantPap ?? '';
+        final nomPap = m.pap.nomPap;
+        final matchesSearch = papId.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+                              nomPap.toLowerCase().contains(_searchQuery.toLowerCase());
+                              
+        bool matchesVille = true;
+        if (_selectedVille != null && _selectedVille != 'Toutes') {
+          final eqCommune = (m.enquete?.communeCode ?? m.resolvedCommune ?? '').trim().toLowerCase();
+          final resVille = (m.resolvedVille ?? '').trim().toLowerCase();
+          final villesStr = _selectedVille!.toLowerCase();
+          final communesOfVille = (_villesData[_selectedVille]?['communes'] as List<String>?) ?? [];
+          
+          matchesVille = eqCommune.contains(villesStr) || 
+                         villesStr.contains(eqCommune) || 
+                         resVille.contains(villesStr) ||
+                         villesStr.contains(resVille) ||
+                         communesOfVille.any((c) => c.toLowerCase().contains(eqCommune) || eqCommune.contains(c.toLowerCase()));
+        }
+
+        bool matchesCommune = true;
+        if (_selectedCommune != null && _selectedCommune != 'Toutes') {
+          final eqCommune = (m.enquete?.communeCode ?? m.resolvedCommune ?? '').trim().toLowerCase();
+          final resCommune = (m.resolvedCommune ?? '').trim().toLowerCase();
+          final selCommune = _selectedCommune!.trim().toLowerCase();
+          
+          matchesCommune = eqCommune.contains(selCommune) || selCommune.contains(eqCommune) ||
+                           resCommune.contains(selCommune) || selCommune.contains(resCommune);
+        }
+
+        return matchesSearch && matchesVille && matchesCommune;
       }).toList();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _fitBounds(singlePointZoom: 15.0, maxZoom: 16.0);
+      }
     });
   }
 
@@ -155,17 +216,21 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _fitBounds() {
+  void _fitBounds({double singlePointZoom = 15.0, double maxZoom = 18.0}) {
     if (_filteredMarkers.isEmpty) return;
     final validLocs = _filteredMarkers.where((m) => m.loc.latitude != null && m.loc.longitude != null).map((m) => m.loc).toList();
     if (validLocs.isEmpty) return;
     
     final points = validLocs.map((l) => LatLng(l.latitude!, l.longitude!)).toList();
     if (points.length == 1) {
-      _mapController.move(points.first, 15.0);
+      _mapController.move(points.first, singlePointZoom);
     } else {
       final bounds = LatLngBounds.fromPoints(points);
-      _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50.0)));
+      _mapController.fitCamera(CameraFit.bounds(
+        bounds: bounds, 
+        padding: const EdgeInsets.all(50.0),
+        maxZoom: maxZoom,
+      ));
     }
   }
 
@@ -228,7 +293,7 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "Enquête: ${enq.idEnquete}",
+                          "Enquête: ${enq?.idEnquete ?? pap.idEnquete ?? 'N/A'}",
                           style: TextStyle(color: Colors.grey[500], fontSize: 12),
                         ),
                       ],
@@ -315,7 +380,7 @@ class _MapScreenState extends State<MapScreen> {
 
   String get _tileUrl {
     if (_isSatellite) {
-      return 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
+      return 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
     } else {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       return isDark 
@@ -344,13 +409,15 @@ class _MapScreenState extends State<MapScreen> {
                           initialCenter: center,
                           initialZoom: 12.0,
                           minZoom: 3.0,
-                          maxZoom: 18.0,
+                          maxZoom: 22.0,
                           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
                         ),
                         children: [
                           TileLayer(
                             urlTemplate: _tileUrl,
-                            maxZoom: 19.0,
+                            maxZoom: 22.0,
+                            maxNativeZoom: 19,
+                            subdomains: const ['mt0', 'mt1', 'mt2', 'mt3'],
                             userAgentPackageName: 'ci.ageroute.ptua_mobile',
                           ),
                           MarkerClusterLayerWidget(
@@ -530,91 +597,76 @@ class _MapScreenState extends State<MapScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedVille,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.location_city, color: Colors.grey, size: 20),
-                            filled: true,
-                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                          ),
-                          hint: const Text('Ville...'),
-                          isExpanded: true,
-                          items: ['Toutes', ..._villesData.keys].map((v) {
+                        child: PremiumSingleSelect<String>(
+  value: _selectedVille,
+  label: 'Villes',
+  icon: Icons.location_city,
+  items: ['Toutes', ..._villesData.keys].map((v) {
                             return DropdownMenuItem<String>(
                               value: v == 'Toutes' ? null : v,
                               child: Text(v, overflow: TextOverflow.ellipsis),
                             );
                           }).toList(),
-                          onChanged: (val) {
+  onChanged: (val) {
                             setState(() {
                               _selectedVille = val;
                               _selectedCommune = null;
                               _applyFilters();
                             });
                             if (val != null && val != 'Toutes') {
-                              final center = _villesData[val]!['center'] as LatLng;
-                              _mapController.move(center, 12.0);
+                              if (_filteredMarkers.isNotEmpty) {
+                                _fitBounds(singlePointZoom: 12.0, maxZoom: 13.0);
+                              } else {
+                                final center = _villesData[val]!['center'] as LatLng;
+                                _mapController.move(center, 12.0);
+                              }
                             } else {
-                              _fitBounds();
+                              _fitBounds(singlePointZoom: 12.0, maxZoom: 12.0);
                             }
                           },
-                        ),
+),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedCommune,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.map, color: Colors.grey, size: 20),
-                            filled: true,
-                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                          ),
-                          hint: const Text('Commune...'),
-                          isExpanded: true,
-                          items: ['Toutes', ..._getFilteredCommunes()].map((c) {
+                        child: Opacity(
+                          opacity: (_selectedVille == null || _selectedVille == 'Toutes') ? 0.5 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: _selectedVille == null || _selectedVille == 'Toutes',
+                            child: PremiumSingleSelect<String>(
+  value: _selectedCommune,
+  label: 'Communes',
+  icon: Icons.map,
+  items: ['Toutes', ..._getFilteredCommunes()].map((c) {
                             return DropdownMenuItem<String>(
                               value: c == 'Toutes' ? null : c,
                               child: Text(c, overflow: TextOverflow.ellipsis),
                             );
                           }).toList(),
-                          onChanged: (val) async {
-                            setState(() {
-                              _selectedCommune = val;
-                              _applyFilters();
-                            });
-                            if (val != null && val != 'Toutes') {
-                              if (_filteredMarkers.isNotEmpty) {
-                                _fitBounds();
-                              } else {
-                                try {
-                                  String query = "$val, ${_selectedVille ?? ''}, Côte d'Ivoire";
-                                  List<Location> locations = await locationFromAddress(query);
-                                  if (locations.isNotEmpty) {
-                                    _mapController.move(LatLng(locations.first.latitude, locations.first.longitude), 13.0);
-                                  }
-                                } catch (e) {
-                                  debugPrint("Erreur geocoding commune: $e");
-                                }
-                              }
-                            } else {
-                              if (_selectedVille != null && _selectedVille != 'Toutes') {
-                                final center = _villesData[_selectedVille]!['center'] as LatLng;
-                                _mapController.move(center, 12.0);
-                              } else {
-                                _fitBounds();
-                              }
-                            }
-                          },
+  onChanged: (val) async {
+    setState(() {
+      _selectedCommune = val;
+      _applyFilters();
+    });
+    if (val != null && val != 'Toutes') {
+      if (_filteredMarkers.isNotEmpty) {
+        _fitBounds(singlePointZoom: 16.0, maxZoom: 17.0);
+      } else {
+        try {
+          String query = "$val, ${_selectedVille ?? ''}, Côte d'Ivoire";
+          List<Location> locations = await locationFromAddress(query);
+          if (locations.isNotEmpty) {
+            _mapController.move(LatLng(locations.first.latitude, locations.first.longitude), 15.0);
+          }
+        } catch (e) {
+          debugPrint("Erreur de géocodage: $e");
+        }
+      }
+    } else {
+      _fitBounds(singlePointZoom: 16.0, maxZoom: 16.0);
+    }
+  },
+),
+                          ),
                         ),
                       ),
                     ],

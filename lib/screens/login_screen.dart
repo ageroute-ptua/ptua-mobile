@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF242A5D),
+                    color: Color(0xFF1E224A),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -95,13 +95,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _usernameController,
                   decoration: InputDecoration(
                     labelText: 'Nom d\'utilisateur',
-                    prefixIcon: const Icon(Icons.person, color: Color(0xFF242A5D)),
+                    prefixIcon: const Icon(Icons.person, color: Color(0xFF1E224A)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF242A5D), width: 2),
+                      borderSide: const BorderSide(color: Color(0xFF1E224A), width: 2),
                     ),
                   ),
                 ),
@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Mot de passe',
-                    prefixIcon: const Icon(Icons.lock, color: Color(0xFF242A5D)),
+                    prefixIcon: const Icon(Icons.lock, color: Color(0xFF1E224A)),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF242A5D), width: 2),
+                      borderSide: const BorderSide(color: Color(0xFF1E224A), width: 2),
                     ),
                   ),
                 ),

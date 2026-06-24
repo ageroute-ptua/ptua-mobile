@@ -92,7 +92,7 @@ class _EnquetePapsScreenState extends State<EnquetePapsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('PAPs de ${widget.enquete.idEnquete}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-        backgroundColor: const Color(0xFFF77F00),
+        backgroundColor: const Color(0xFF1E224A),
         actions: [
           IconButton(
             icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
@@ -199,18 +199,32 @@ class _EnquetePapsScreenState extends State<EnquetePapsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          // Crée un nouveau PAP
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PapStepperScreen(idEnquete: widget.enquete.idEnquete)),
-          );
-          if (result == true) _loadPaps();
-        },
-        backgroundColor: const Color(0xFF009E60),
-        icon: const Icon(Icons.person_add, color: Colors.white),
-        label: const Text('Nouveau PAP', style: TextStyle(color: Colors.white)),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE1660B).withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () async {
+            // Crée un nouveau PAP
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => PapStepperScreen(idEnquete: widget.enquete.idEnquete)),
+            );
+            if (result == true) _loadPaps();
+          },
+          backgroundColor: const Color(0xFFE1660B),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 22),
+          label: const Text('NOUVEAU PAP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+        ),
       ),
     );
   }

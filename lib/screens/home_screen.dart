@@ -69,6 +69,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return "N/A";
+    return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+  }
   Future<void> _confirmDelete(Enquete enquete) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -120,14 +125,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             expandedHeight: 260.0,
             floating: false,
             pinned: true,
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE1660B),
+            backgroundColor: const Color(0xFF1E224A),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isDark 
-                      ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
-                      : [const Color(0xFFF77F00), const Color(0xFFE1660B)],
+                    colors: [const Color(0xFF1E224A), const Color(0xFF2A2E5D)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -320,8 +323,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
-                                            'Commune: ${enquete.communeCode ?? "N/A"}',
+                                            'Ville: ${enquete.communeCode ?? "N/A"} - Commune: ${enquete.quartierCode ?? "N/A"}',
                                             style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.access_time, size: 14, color: Colors.grey[400]),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Créé le: ${_formatDate(enquete.createdAt)}' + (enquete.updatedAt != enquete.createdAt ? ' | Modifié: ${_formatDate(enquete.updatedAt)}' : ''),
+                                            style: TextStyle(color: Colors.grey[400], fontSize: 12),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),

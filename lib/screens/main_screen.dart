@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
 import '../providers/navigation_provider.dart';
 import 'home_screen.dart';
 import 'enquete_form_screen.dart';
@@ -25,32 +26,40 @@ class MainScreen extends ConsumerWidget {
         index: currentIndex,
         children: screens,
       ),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: StylishBottomBar(
         currentIndex: currentIndex,
         onTap: (index) {
           ref.read(navigationProvider.notifier).state = index;
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        selectedItemColor: const Color(0xFFE1660B), // Orange AGEROUTE
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Accueil',
+        option: AnimatedBarOptions(
+          iconStyle: IconStyle.animated,
+          barAnimation: BarAnimation.liquid,
+        ),
+        hasNotch: true,
+        items: [
+          BottomBarItem(
+            icon: const Icon(Icons.dashboard_outlined),
+            selectedIcon: const Icon(Icons.dashboard),
+            selectedColor: const Color(0xFFE1660B),
+            title: const Text('Accueil'),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.description, size: 30), // Plus logique pour formulaire
-            label: 'Formulaire',
+          BottomBarItem(
+            icon: const Icon(Icons.description_outlined),
+            selectedIcon: const Icon(Icons.description),
+            selectedColor: const Color(0xFFE1660B),
+            title: const Text('Formulaire'),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map),
-            label: 'Carte',
+          BottomBarItem(
+            icon: const Icon(Icons.map_outlined),
+            selectedIcon: const Icon(Icons.map),
+            selectedColor: const Color(0xFFE1660B),
+            title: const Text('Carte'),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Paramètres',
+          BottomBarItem(
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            selectedColor: const Color(0xFFE1660B),
+            title: const Text('Paramètres'),
           ),
         ],
       ),

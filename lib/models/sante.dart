@@ -10,6 +10,9 @@ class Sante {
   final String? typeSoinMen;
   final String? justifReponse;
   final int? periodeAnMalade;
+  final String? autreTauxCouverture;
+  final String? autreTypeSoin;
+  final String? autreJustifTypeSoin;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String syncStatus;
@@ -27,6 +30,9 @@ class Sante {
     this.typeSoinMen,
     this.justifReponse,
     this.periodeAnMalade,
+    this.autreTauxCouverture,
+    this.autreTypeSoin,
+    this.autreJustifTypeSoin,
     this.createdAt,
     this.updatedAt,
     this.syncStatus = 'local',
@@ -46,6 +52,9 @@ class Sante {
       typeSoinMen: map['typeSoinMen'],
       justifReponse: map['justifReponse'],
       periodeAnMalade: map['periodeAnMalade'],
+      autreTauxCouverture: map['autreTauxCouverture'],
+      autreTypeSoin: map['autreTypeSoin'],
+      autreJustifTypeSoin: map['autreJustifTypeSoin'],
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
       syncStatus: map['syncStatus'] ?? 'local',
@@ -66,6 +75,9 @@ class Sante {
       'typeSoinMen': typeSoinMen,
       'justifReponse': justifReponse,
       'periodeAnMalade': periodeAnMalade,
+      'autreTauxCouverture': autreTauxCouverture,
+      'autreTypeSoin': autreTypeSoin,
+      'autreJustifTypeSoin': autreJustifTypeSoin,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'syncStatus': syncStatus,
@@ -86,6 +98,9 @@ class Sante {
       typeSoinMen: typeSoinMen,
       justifReponse: justifReponse,
       periodeAnMalade: periodeAnMalade,
+      autreTauxCouverture: autreTauxCouverture,
+      autreTypeSoin: autreTypeSoin,
+      autreJustifTypeSoin: autreJustifTypeSoin,
       createdAt: createdAt,
       updatedAt: updatedAt,
       syncStatus: syncStatus ?? this.syncStatus,

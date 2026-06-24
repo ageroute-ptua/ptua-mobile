@@ -2,7 +2,10 @@ class Activite {
   final int? idActivite;
   final String idPap;
   final String? activitePrincipMenage;
-  final double? revenuMoyeActPrin;
+  final double? revenuMoyeActPrinMauvaise;
+  final double? revenuMoyeActPrinBonne;
+  final String? statutActivite;
+  final int? nbMoisActivite;
   final bool? transferArg;
   final String? lieuTravail;
   final bool? presenceActivSecondMenage;
@@ -14,6 +17,10 @@ class Activite {
   final bool? payeTaxes;
   final String? quellesTaxes;
   final String? frequenceTaxes;
+  final String? situationEconoMenage;
+  final String? autreActivitePrinc;
+  final String? autreLieuTravail;
+  final double? revenuMoyeActSeco;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String syncStatus;
@@ -23,7 +30,10 @@ class Activite {
     this.idActivite,
     required this.idPap,
     this.activitePrincipMenage,
-    this.revenuMoyeActPrin,
+    this.revenuMoyeActPrinMauvaise,
+    this.revenuMoyeActPrinBonne,
+    this.statutActivite,
+    this.nbMoisActivite,
     this.transferArg,
     this.lieuTravail,
     this.presenceActivSecondMenage,
@@ -35,6 +45,10 @@ class Activite {
     this.payeTaxes,
     this.quellesTaxes,
     this.frequenceTaxes,
+    this.situationEconoMenage,
+    this.autreActivitePrinc,
+    this.autreLieuTravail,
+    this.revenuMoyeActSeco,
     this.createdAt,
     this.updatedAt,
     this.syncStatus = 'local',
@@ -46,7 +60,10 @@ class Activite {
       idActivite: map['idActivite'],
       idPap: map['idPap'],
       activitePrincipMenage: map['activitePrincipMenage'],
-      revenuMoyeActPrin: map['revenuMoyeActPrin']?.toDouble(),
+      revenuMoyeActPrinMauvaise: map['revenuMoyeActPrinMauvaise']?.toDouble(),
+      revenuMoyeActPrinBonne: map['revenuMoyeActPrinBonne']?.toDouble(),
+      statutActivite: map['statutActivite'],
+      nbMoisActivite: map['nbMoisActivite'],
       transferArg: map['transferArg'] == 1,
       lieuTravail: map['lieuTravail'],
       presenceActivSecondMenage: map['presenceActivSecondMenage'] == 1,
@@ -58,6 +75,10 @@ class Activite {
       payeTaxes: map['payeTaxes'] == 1,
       quellesTaxes: map['quellesTaxes'],
       frequenceTaxes: map['frequenceTaxes'],
+      situationEconoMenage: map['situationEconoMenage'],
+      autreActivitePrinc: map['autreActivitePrinc'],
+      autreLieuTravail: map['autreLieuTravail'],
+      revenuMoyeActSeco: map['revenuMoyeActSeco']?.toDouble(),
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
       syncStatus: map['syncStatus'] ?? 'local',
@@ -70,7 +91,10 @@ class Activite {
       'idActivite': idActivite,
       'idPap': idPap,
       'activitePrincipMenage': activitePrincipMenage,
-      'revenuMoyeActPrin': revenuMoyeActPrin,
+      'revenuMoyeActPrinMauvaise': revenuMoyeActPrinMauvaise,
+      'revenuMoyeActPrinBonne': revenuMoyeActPrinBonne,
+      'statutActivite': statutActivite,
+      'nbMoisActivite': nbMoisActivite,
       'transferArg': transferArg == true ? 1 : 0,
       'lieuTravail': lieuTravail,
       'presenceActivSecondMenage': presenceActivSecondMenage == true ? 1 : 0,
@@ -82,6 +106,10 @@ class Activite {
       'payeTaxes': payeTaxes == true ? 1 : 0,
       'quellesTaxes': quellesTaxes,
       'frequenceTaxes': frequenceTaxes,
+      'situationEconoMenage': situationEconoMenage,
+      'autreActivitePrinc': autreActivitePrinc,
+      'autreLieuTravail': autreLieuTravail,
+      'revenuMoyeActSeco': revenuMoyeActSeco,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'syncStatus': syncStatus,
@@ -94,7 +122,10 @@ class Activite {
       idActivite: idActivite,
       idPap: idPap,
       activitePrincipMenage: activitePrincipMenage,
-      revenuMoyeActPrin: revenuMoyeActPrin,
+      revenuMoyeActPrinMauvaise: revenuMoyeActPrinMauvaise,
+      revenuMoyeActPrinBonne: revenuMoyeActPrinBonne,
+      statutActivite: statutActivite,
+      nbMoisActivite: nbMoisActivite,
       transferArg: transferArg,
       lieuTravail: lieuTravail,
       presenceActivSecondMenage: presenceActivSecondMenage,
@@ -106,6 +137,10 @@ class Activite {
       payeTaxes: payeTaxes,
       quellesTaxes: quellesTaxes,
       frequenceTaxes: frequenceTaxes,
+      situationEconoMenage: situationEconoMenage,
+      autreActivitePrinc: autreActivitePrinc,
+      autreLieuTravail: autreLieuTravail,
+      revenuMoyeActSeco: revenuMoyeActSeco,
       createdAt: createdAt,
       updatedAt: updatedAt,
       syncStatus: syncStatus ?? this.syncStatus,

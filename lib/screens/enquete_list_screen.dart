@@ -14,7 +14,10 @@ class EnqueteListScreen extends StatefulWidget {
 class _EnqueteListScreenState extends State<EnqueteListScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   List<Enquete> _enquetes = [];
+  List<Enquete> _filteredEnquetes = [];
   bool _isLoading = true;
+  String _searchQuery = '';
+  DateTimeRange? _selectedDateRange;
 
   @override
   void initState() {
@@ -27,9 +30,37 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
     setState(() {
       _enquetes = enquetes;
       _isLoading = false;
+      _applyFilters();
     });
   }
 
+  void _applyFilters() {
+    setState(() {
+      _filteredEnquetes = _enquetes.where((e) {
+        final query = _searchQuery.toLowerCase();
+        final matchesSearch = query.isEmpty || 
+          e.idEnquete.toLowerCase().contains(query) || 
+          (e.communeCode ?? '').toLowerCase().contains(query) ||
+          (e.quartierCode ?? '').toLowerCase().contains(query);
+          
+        bool matchesDate = true;
+        if (_selectedDateRange != null && e.createdAt != null) {
+          final date = e.createdAt!;
+          final start = _selectedDateRange!.start;
+          final end = _selectedDateRange!.end.add(const Duration(days: 1)); // Includes the whole end day
+          matchesDate = date.isAfter(start) && date.isBefore(end);
+        }
+        
+        return matchesSearch && matchesDate;
+      }).toList();
+    });
+  }
+
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return "N/A";
+    return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+  }
   Future<void> _confirmDelete(Enquete enquete) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -68,14 +99,103 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Toutes les enquêtes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFFF77F00),
+        backgroundColor: const Color(0xFF1E224A),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFE1660B)))
-          : _enquetes.isEmpty
-              ? RefreshIndicator(
+      body: Column(
+        children: [
+          if (!_isLoading) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: (val) {
+                        _searchQuery = val;
+                        _applyFilters();
+                      },
+                      decoration: InputDecoration(
+                        hintText: "Rechercher ID, ville ou commune...",
+                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                        filled: true,
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                        initialDateRange: _selectedDateRange,
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.light(
+                                primary: Color(0xFFE1660B),
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedDateRange = picked;
+                          _applyFilters();
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _selectedDateRange != null ? const Color(0xFFE1660B) : (isDark ? Colors.grey[800] : Colors.grey[200]),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.calendar_month,
+                        color: _selectedDateRange != null ? Colors.white : Colors.grey,
+                      ),
+                    ),
+                  ),
+                  if (_selectedDateRange != null) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedDateRange = null;
+                          _applyFilters();
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.clear, color: Colors.red),
+                      ),
+                    ),
+                  ]
+                ],
+              ),
+            ),
+          ],
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFE1660B)))
+                : _filteredEnquetes.isEmpty
+                    ? RefreshIndicator(
                   onRefresh: _loadData,
                   color: const Color(0xFFE1660B),
                   child: ListView(
@@ -92,9 +212,9 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    itemCount: _enquetes.length,
+                    itemCount: _filteredEnquetes.length,
                     itemBuilder: (context, index) {
-                      final enquete = _enquetes[index];
+                      final enquete = _filteredEnquetes[index];
                       final isSynced = enquete.syncStatus == 'synced';
                       
                       return Container(
@@ -104,7 +224,7 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: isDark ? Colors.black26 : Colors.black.withOpacity(0.05),
+                              color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.05),
                               blurRadius: 15,
                               offset: const Offset(0, 5),
                             ),
@@ -128,7 +248,7 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(14),
                                     decoration: BoxDecoration(
-                                      color: isSynced ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                                      color: isSynced ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Icon(
@@ -157,13 +277,37 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
                                             const SizedBox(width: 4),
                                             Expanded(
                                               child: Text(
-                                                'Commune: ${enquete.communeCode ?? "N/A"}',
+                                                'Ville: ${enquete.communeCode ?? "N/A"} - Commune: ${enquete.quartierCode ?? "N/A"}',
                                                 style: TextStyle(color: Colors.grey[500], fontSize: 14),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
                                           ],
                                         ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.access_time, size: 12, color: Colors.blueGrey[400]),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Créé: ${_formatDate(enquete.createdAt)}',
+                                              style: TextStyle(color: Colors.blueGrey[400], fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                        if (enquete.updatedAt != null) ...[
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.edit_calendar, size: 12, color: Colors.orange[400]),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Modif: ${_formatDate(enquete.updatedAt)}',
+                                                style: TextStyle(color: Colors.orange[400], fontSize: 12),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -198,6 +342,9 @@ class _EnqueteListScreenState extends State<EnqueteListScreen> {
                     },
                   ),
                 ),
+          ),
+        ],
+      ),
     );
   }
 }

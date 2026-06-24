@@ -17,6 +17,20 @@ class InfoLogement {
   final int? nbMoisLocation;
   final double? revenusLocation;
   final String? syncStatus;
+
+  final String? autreSanitaire;
+  final String? srcCombustion;
+  final String? autreSourceCombustion;
+  final String? srcEau;
+  final int? anneeUtilEau;
+  final double? distMoyDomEau;
+  final double? montantDepEau;
+  final String? principaleSrcEclair;
+  final String? typeReseauElec;
+  final String? autreTypeReseauElec;
+  final int? anConReseauElec;
+  final double? montantDepConsoEnergie;
+  final int? periodeAnCoupure;
   final String? deviceId;
 
   InfoLogement({
@@ -38,6 +52,20 @@ class InfoLogement {
     this.nbMoisLocation,
     this.revenusLocation,
     this.syncStatus,
+
+    this.autreSanitaire,
+    this.srcCombustion,
+    this.autreSourceCombustion,
+    this.srcEau,
+    this.anneeUtilEau,
+    this.distMoyDomEau,
+    this.montantDepEau,
+    this.principaleSrcEclair,
+    this.typeReseauElec,
+    this.autreTypeReseauElec,
+    this.anConReseauElec,
+    this.montantDepConsoEnergie,
+    this.periodeAnCoupure,
     this.deviceId,
   });
 
@@ -60,6 +88,20 @@ class InfoLogement {
     'nbMoisLocation': nbMoisLocation,
     'revenusLocation': revenusLocation,
     'syncStatus': syncStatus,
+
+    'autreSanitaire': autreSanitaire,
+    'srcCombustion': srcCombustion,
+    'autreSourceCombustion': autreSourceCombustion,
+    'srcEau': srcEau,
+    'anneeUtilEau': anneeUtilEau,
+    'distMoyDomEau': distMoyDomEau,
+    'montantDepEau': montantDepEau,
+    'principaleSrcEclair': principaleSrcEclair,
+    'typeReseauElec': typeReseauElec,
+    'autreTypeReseauElec': autreTypeReseauElec,
+    'anConReseauElec': anConReseauElec,
+    'montantDepConsoEnergie': montantDepConsoEnergie,
+    'periodeAnCoupure': periodeAnCoupure,
     'deviceId': deviceId,
   };
 }
@@ -131,6 +173,19 @@ class InfoFinanciere {
   final bool? pratiqueTontine;
   final bool? membresParticipentCharges;
   final String? syncStatus;
+
+  final double? consomAlimentaire;
+  final double? logement;
+  final double? education;
+  final double? sante;
+  final double? habillement;
+  final double? transport;
+  final double? communication;
+  final double? entretienEquip;
+  final double? autreCharge;
+  final double? coutTotalChargeMenage;
+  final int? nbrTransfer;
+  final double? montantTransfer6mois;
   final String? deviceId;
 
   InfoFinanciere({
@@ -140,6 +195,19 @@ class InfoFinanciere {
     this.pratiqueTontine,
     this.membresParticipentCharges,
     this.syncStatus,
+
+    this.consomAlimentaire,
+    this.logement,
+    this.education,
+    this.sante,
+    this.habillement,
+    this.transport,
+    this.communication,
+    this.entretienEquip,
+    this.autreCharge,
+    this.coutTotalChargeMenage,
+    this.nbrTransfer,
+    this.montantTransfer6mois,
     this.deviceId,
   });
 
@@ -150,6 +218,19 @@ class InfoFinanciere {
     'pratiqueTontine': pratiqueTontine,
     'membresParticipentCharges': membresParticipentCharges,
     'syncStatus': syncStatus,
+
+    'consomAlimentaire': consomAlimentaire,
+    'logement': logement,
+    'education': education,
+    'sante': sante,
+    'habillement': habillement,
+    'transport': transport,
+    'communication': communication,
+    'entretienEquip': entretienEquip,
+    'autreCharge': autreCharge,
+    'coutTotalChargeMenage': coutTotalChargeMenage,
+    'nbrTransfer': nbrTransfer,
+    'montantTransfer6mois': montantTransfer6mois,
     'deviceId': deviceId,
   };
 }

@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../models/enquete.dart';
 import '../services/database_helper.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../providers/navigation_provider.dart';
 
 class EnqueteFormScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class EnqueteFormScreen extends ConsumerStatefulWidget {
 class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _dbHelper = DatabaseHelper();
+  final _secureStorage = const FlutterSecureStorage();
   
   int _currentStep = 0;
   bool _isSaving = false;
@@ -48,8 +50,34 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
         _photoFile = File(widget.enqueteToEdit!.photoPath!);
       }
     } else {
-      // Nouvelle enquête : auto-détection GPS
+      // Nouvelle enquête : auto-détection GPS, ID et Enqueteur
+      _generateIdEnquete();
+      _loadEnqueteur();
       _autoLocateEnquete();
+    }
+  }
+
+
+  Future<void> _generateIdEnquete() async {
+    final enquetes = await _dbHelper.getEnquetes();
+    int maxId = 0;
+    for (var e in enquetes) {
+      if (e.id != null && e.id! > maxId) maxId = e.id!;
+    }
+    final newIdStr = (maxId + 1).toString().padLeft(3, '0');
+    if (mounted) {
+       setState(() {
+         _idEnqueteController.text = "ENQ-$newIdStr";
+       });
+    }
+  }
+
+  Future<void> _loadEnqueteur() async {
+    final username = await _secureStorage.read(key: 'username');
+    if (username != null && mounted) {
+      setState(() {
+        _enqueteurController.text = username;
+      });
     }
   }
 
@@ -62,10 +90,13 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 10),
-        );
+        Position? position = await Geolocator.getLastKnownPosition();
+        if (position == null) {
+          position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 5),
+          );
+        }
         final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
         if (placemarks.isNotEmpty && mounted) {
           final place = placemarks.first;
@@ -185,7 +216,7 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(widget.enqueteToEdit != null ? 'Modifier Enquête' : 'Nouvelle Enquête', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFFE1660B),
+        backgroundColor: const Color(0xFF1E224A),
         elevation: 0,
         automaticallyImplyLeading: widget.enqueteToEdit != null,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -223,21 +254,19 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
                         ),
                       ),
                     const SizedBox(height: 12),
+
                     _buildTextField(
                       controller: _idEnqueteController, 
-                      label: 'ID Enquête (Ex: ENQ-001)', 
-                      icon: Icons.badge,
-                      textCapitalization: TextCapitalization.characters,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'L\'ID de l\'enquête est requis';
-                        return null;
-                      },
+                      label: 'ID Enquête (Généré automatiquement)', 
+                      icon: Icons.qr_code,
+                      readOnly: true,
+                      fillColor: Colors.grey[200],
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _communeCodeController, 
-                      label: 'Commune', 
-                      icon: Icons.map,
+                      label: 'Ville', 
+                      icon: Icons.location_city,
                       textCapitalization: TextCapitalization.characters,
                       suffixIcon: IconButton(
                         icon: _isLocating 
@@ -247,31 +276,22 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
                         onPressed: _isLocating ? null : _autoLocateEnquete,
                       ),
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'La commune est requise';
+                        if (value == null || value.trim().isEmpty) return 'La ville est requise';
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _quartierCodeController, 
-                      label: 'Ville', 
-                      icon: Icons.location_city,
-                      textCapitalization: TextCapitalization.words,
-                      suffixIcon: const Icon(Icons.location_on, color: Color(0xFF009E60), size: 20),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _enqueteurController, 
-                      label: 'Nom de l\'enquêteur', 
-                      icon: Icons.person,
-                      textCapitalization: TextCapitalization.words,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s\-]'))],
+                      label: 'Commune', 
+                      icon: Icons.map,
+                      textCapitalization: TextCapitalization.characters,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Le nom de l\'enquêteur est requis';
-                        if (value.trim().length < 2) return 'Le nom doit faire au moins 2 caractères';
+                        if (value == null || value.trim().isEmpty) return 'La commune est requise';
                         return null;
                       },
                     ),
+
                   ],
                 ),
               ),
@@ -336,6 +356,8 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
     Widget? suffixIcon,
+    bool readOnly = false,
+    Color? fillColor,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -347,9 +369,12 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
       ),
       child: TextFormField(
         controller: controller,
+        readOnly: readOnly,
         textCapitalization: textCapitalization,
         inputFormatters: inputFormatters,
         decoration: InputDecoration(
+          filled: true,
+          fillColor: fillColor ?? Colors.white,
           labelText: label,
           labelStyle: const TextStyle(color: Colors.grey),
           prefixIcon: Icon(icon, color: const Color(0xFFE1660B)),
@@ -357,8 +382,6 @@ class _EnqueteFormScreenState extends ConsumerState<EnqueteFormScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE1660B), width: 1.5)),
-          filled: true,
-          fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
         validator: validator ?? ((value) => value!.isEmpty ? 'Ce champ est requis' : null),

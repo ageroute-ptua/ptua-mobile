@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../widgets/custom_dropdown.dart';
+import '../widgets/premium_single_select.dart';
+import '../widgets/premium_multi_select.dart';
 import '../models/activite.dart';
 import '../services/database_helper.dart';
 
@@ -15,16 +18,18 @@ class _ActiviteFormScreenState extends State<ActiviteFormScreen> {
   final _dbHelper = DatabaseHelper();
   
   String? _activitePrincip;
-  final _revenuMoyeController = TextEditingController();
+  final _revenuMoyeMauvaiseController = TextEditingController();
+  final _revenuMoyeBonneController = TextEditingController();
+  String? _statutActivite;
+  final _nbMoisActiviteController = TextEditingController();
   final _lieuTravailController = TextEditingController();
   final _revenuCumulController = TextEditingController();
 
   String? _transferArg = 'Non';
   String? _presenceActivSecondMenage = 'Non';
-  final _activiteSecondaireController = TextEditingController();
+  String? _activiteSecondaire;
   String? _isParcelleHorsEmprise = 'Oui';
   
-  // Nouveaux champs de skip logic
   String? _payeTaxes = 'Non';
   final _quellesTaxesController = TextEditingController();
   String? _frequenceTaxes;
@@ -37,23 +42,20 @@ class _ActiviteFormScreenState extends State<ActiviteFormScreen> {
       final activite = Activite(
         idPap: widget.idPap,
         activitePrincipMenage: _activitePrincip,
-        revenuMoyeActPrin: double.tryParse(_revenuMoyeController.text),
+        revenuMoyeActPrinMauvaise: double.tryParse(_revenuMoyeMauvaiseController.text),
+        revenuMoyeActPrinBonne: double.tryParse(_revenuMoyeBonneController.text),
+        statutActivite: _statutActivite,
+        nbMoisActivite: int.tryParse(_nbMoisActiviteController.text),
         transferArg: _transferArg == 'Oui',
         lieuTravail: _lieuTravailController.text,
         presenceActivSecondMenage: _presenceActivSecondMenage == 'Oui',
-        activiteSecondaire: _presenceActivSecondMenage == 'Oui'
-            ? _activiteSecondaireController.text
-            : null,
+        activiteSecondaire: _presenceActivSecondMenage == 'Oui' ? _activiteSecondaire : null,
         revenuCumul: double.tryParse(_revenuCumulController.text),
         isParcelleHorsEmprise: _isParcelleHorsEmprise == 'Oui',
         aEmployes: _aEmployes == 'Oui',
-        nbEmployes: _aEmployes == 'Oui'
-            ? int.tryParse(_nbEmployesController.text)
-            : null,
+        nbEmployes: _aEmployes == 'Oui' ? int.tryParse(_nbEmployesController.text) : null,
         payeTaxes: _payeTaxes == 'Oui',
-        quellesTaxes: _payeTaxes == 'Oui'
-            ? _quellesTaxesController.text
-            : null,
+        quellesTaxes: _payeTaxes == 'Oui' ? _quellesTaxesController.text : null,
         frequenceTaxes: _payeTaxes == 'Oui' ? _frequenceTaxes : null,
         createdAt: DateTime.now(),
         syncStatus: 'local',
@@ -70,134 +72,171 @@ class _ActiviteFormScreenState extends State<ActiviteFormScreen> {
     }
   }
 
+  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E224A))),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, {bool isNumber = false, IconData? icon}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: icon != null ? Icon(icon) : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBoolField(String label, String? value, Function(String?) onChanged) {
+    return PremiumSingleSelect<String>(
+      value: value,
+      label: label,
+      icon: Icons.check_circle_outline,
+      items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+      onChanged: onChanged,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final acts = ['Planteur/Cultivateur', 'Pêcheur', 'Eleveur/Fermier', 'Commerçant', 'Transporteur', 'Salarié du public', 'Salarié du privé', 'Artisan', 'Ouvrier', 'Employé', 'Elève/Etudiant', 'Femme au foyer', 'Sans emploi', 'Retraité', 'Guide religieux', 'Autres'];
+    
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text('Activités & Revenus', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF009E60),
+        title: const Text('Activités & Revenus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF1E224A),
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                value: _activitePrincip,
-                decoration: const InputDecoration(labelText: 'Activité Principale', border: OutlineInputBorder()),
-                items: [
-                  'Planteur/Cultivateur', 'Pêcheur', 'Eleveur/Fermier', 'Commerçant', 'Transporteur', 'Salarié du public', 'Salarié du privé', 'Artisan', 'Ouvrier', 'Employé', 'Elève/Etudiant', 'Femme au foyer', 'Sans emploi', 'Retraité', 'Guide religieux', 'Autres'
-                ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: (v) => setState(() => _activitePrincip = v),
-              ),
-              const SizedBox(height: 16),
-              
-              TextField(
-                controller: _revenuMoyeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Revenu moyen estimé (FCFA)', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _lieuTravailController,
-                decoration: const InputDecoration(labelText: 'Lieu de travail', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                value: _presenceActivSecondMenage,
-                decoration: const InputDecoration(labelText: "Présence d'activité secondaire ?"),
-                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: (v) => setState(() => _presenceActivSecondMenage = v),
-              ),
-              if (_presenceActivSecondMenage == 'Oui') ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _activiteSecondaireController,
-                  decoration: const InputDecoration(labelText: 'Laquelle ?', border: OutlineInputBorder()),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildSectionCard(
+                      title: 'Activité Principale',
+                      children: [
+                        PremiumSingleSelect<String>(
+  value: _activitePrincip,
+  label: 'Activité Principale',
+  icon: Icons.work,
+  items: acts.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+  onChanged: (v) => setState(() => _activitePrincip = v),
+),
+                        const SizedBox(height: 16),
+                        PremiumSingleSelect<String>(
+  value: _statutActivite,
+  label: "Statut dans l\'emploi",
+  icon: Icons.assignment_ind,
+  items: ['Propriétaire', 'Employé', 'Fonctionnaire public', 'Fonctionnaire privé', 'Colocataire/Associé', 'Autre']
+                              .map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+  onChanged: (v) => setState(() => _statutActivite = v),
+),
+                        const SizedBox(height: 16),
+                        _buildTextField(_nbMoisActiviteController, 'Nombre de mois menés en 2023', isNumber: true, icon: Icons.calendar_today),
+                        _buildTextField(_revenuMoyeMauvaiseController, 'Revenu moyen mensuel (Mauvaise période)', isNumber: true, icon: Icons.trending_down),
+                        _buildTextField(_revenuMoyeBonneController, 'Revenu moyen mensuel (Bonne période)', isNumber: true, icon: Icons.trending_up),
+                        _buildTextField(_lieuTravailController, 'Lieu de travail', icon: Icons.location_city),
+                      ],
+                    ),
+                    _buildSectionCard(
+                      title: 'Activité Secondaire & Globale',
+                      children: [
+                        _buildBoolField('Présence d\'activité secondaire ?', _presenceActivSecondMenage, (v) => setState(() => _presenceActivSecondMenage = v)),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          child: _presenceActivSecondMenage == 'Oui' ? Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: PremiumSingleSelect<String>(
+  value: _activiteSecondaire,
+  label: 'Laquelle ?',
+  icon: Icons.work_outline,
+  items: acts.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+  onChanged: (v) => setState(() => _activiteSecondaire = v),
+),
+                          ) : const SizedBox.shrink(),
+                        ),
+                        _buildTextField(_revenuCumulController, 'Revenus cumulés du ménage (FCFA)', isNumber: true, icon: Icons.account_balance_wallet),
+                        _buildBoolField('Le ménage reçoit-il un transfert d\'argent ?', _transferArg, (v) => setState(() => _transferArg = v)),
+                      ],
+                    ),
+                    _buildSectionCard(
+                      title: 'Entreprise & Taxes',
+                      children: [
+                        _buildBoolField('L\'entreprise a-t-elle des employés ?', _aEmployes, (v) => setState(() => _aEmployes = v)),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          child: _aEmployes == 'Oui' ? _buildTextField(_nbEmployesController, 'Nombre d\'employés', isNumber: true, icon: Icons.group) : const SizedBox.shrink(),
+                        ),
+                        _buildBoolField('Payez-vous des taxes ?', _payeTaxes, (v) => setState(() => _payeTaxes = v)),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          child: _payeTaxes == 'Oui' ? Column(
+                            children: [
+                              _buildTextField(_quellesTaxesController, 'Quelles taxes payez-vous ?', icon: Icons.request_quote),
+                              PremiumSingleSelect<String>(
+  value: _frequenceTaxes,
+  label: 'À quelle fréquence ?',
+  icon: Icons.update,
+  items: ['Journalière', 'Hebdomadaire', 'Mensuelle', 'Trimestrielle', 'Annuelle', 'Autre']
+                                    .map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+  onChanged: (v) => setState(() => _frequenceTaxes = v),
+),
+                            ],
+                          ) : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _revenuCumulController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Revenus cumulés du ménage (FCFA)', border: OutlineInputBorder()),
               ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                value: _transferArg,
-                decoration: const InputDecoration(labelText: "Le ménage reçoit-il un transfert d'argent ?"),
-                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: (v) => setState(() => _transferArg = v),
-              ),
-              const SizedBox(height: 16),
-
-              const Divider(height: 32, thickness: 2),
-              
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                value: _aEmployes,
-                decoration: const InputDecoration(labelText: "L'entreprise a-t-elle des employés ?"),
-                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: (v) => setState(() => _aEmployes = v),
-              ),
-              if (_aEmployes == 'Oui') ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _nbEmployesController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Combien d'employés l'activité engage-t-elle ?", border: OutlineInputBorder()),
+            ),
+            SafeArea(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
                 ),
-              ],
-              const SizedBox(height: 16),
-              
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                value: _payeTaxes,
-                decoration: const InputDecoration(labelText: "Payez-vous des taxes ?"),
-                items: ['Oui', 'Non'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: (v) => setState(() => _payeTaxes = v),
-              ),
-              if (_payeTaxes == 'Oui') ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _quellesTaxesController,
-                  decoration: const InputDecoration(labelText: "Si oui, quelles taxes payez-vous ?", border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: _frequenceTaxes,
-                  decoration: const InputDecoration(labelText: "À quelle fréquence ?"),
-                  items: ['Journalière', 'Hebdomadaire', 'Mensuelle', 'Trimestrielle', 'Annuelle', 'Autre']
-                      .map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                  onChanged: (v) => setState(() => _frequenceTaxes = v),
-                ),
-              ],
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _saveActivite,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF77F00),
+                    backgroundColor: const Color(0xFFE1660B),
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    minimumSize: const Size(double.infinity, 50),
                   ),
-                  child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-              )
-            ],
-          ),
+              ),
+            )
+          ],
         ),
       ),
     );

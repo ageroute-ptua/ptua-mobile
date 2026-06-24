@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../widgets/custom_dropdown.dart';
+import '../widgets/premium_single_select.dart';
+import '../widgets/premium_multi_select.dart';
+import '../widgets/custom_segmented_bool.dart';
 import '../services/database_helper.dart';
 
 class AgricultureFormScreen extends StatefulWidget {
@@ -14,17 +18,14 @@ class _AgricultureFormScreenState extends State<AgricultureFormScreen> {
   final _dbHelper = DatabaseHelper();
   bool _isSaving = false;
 
-  // Switches
   bool _aParcelles = false;
   bool _aAnimaux = false;
 
-  // Parcelle Agricole
   String? _typeCulture;
   String? _modeAcquisition;
   bool _exploiteSoiMeme = true;
   final _localisationController = TextEditingController();
 
-  // Elevage
   final _nbBovinsController = TextEditingController();
   final _nbOvinsController = TextEditingController();
   final _nbVolaillesController = TextEditingController();
@@ -51,7 +52,7 @@ class _AgricultureFormScreenState extends State<AgricultureFormScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Données agricoles enregistrées !'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Données agricoles enregistrées !', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
         );
         Navigator.pop(context, true);
       }
@@ -66,99 +67,156 @@ class _AgricultureFormScreenState extends State<AgricultureFormScreen> {
     }
   }
 
+  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E224A))),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, {bool isNumber = false, IconData? icon}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: icon != null ? Icon(icon) : null,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Agriculture & Élevage'), backgroundColor: const Color(0xFFF77F00)),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              const Text('PARCELLE AGRICOLE', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF77F00))),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Le ménage dispose-t-il de parcelles cultivables ?'),
-                value: _aParcelles,
-                onChanged: (v) => setState(() => _aParcelles = v),
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        title: const Text('Agriculture & Élevage', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF1E224A),
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildSectionCard(
+                      title: 'Parcelle Agricole',
+                      children: [
+                        CustomSegmentedBool(
+  label: 'Le ménage dispose-t-il de parcelles cultivables ?',
+  value: _aParcelles,
+  onChanged: (v) => setState(() => _aParcelles = v),
+),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          child: _aParcelles ? Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              PremiumSingleSelect<String>(
+  value: _typeCulture,
+  label: 'Type de culture',
+  icon: Icons.grass,
+  items: ['Cultures pérennes', 'Cultures Annuelles', 'Cultures Vivrières']
+                                    .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+  onChanged: (v) => setState(() => _typeCulture = v),
+),
+                              const SizedBox(height: 16),
+                              PremiumSingleSelect<String>(
+  value: _modeAcquisition,
+  label: "Mode d\'acquisition",
+  icon: Icons.real_estate_agent,
+  items: ['Achat', 'Lèg', 'Bien de la famille(Filière coutumière)', 'Don', 'Héritage', 'Location', 'Occupation informelle', 'Autre']
+                                    .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+  onChanged: (v) => setState(() => _modeAcquisition = v),
+),
+                              const SizedBox(height: 16),
+                              CustomSegmentedBool(
+  label: 'Exploitez-vous vous-même le champ ?',
+  value: _exploiteSoiMeme,
+  onChanged: (v) => setState(() => _exploiteSoiMeme = v),
+),
+                              const SizedBox(height: 16),
+                              _buildTextField(_localisationController, 'Localisation des parcelles', icon: Icons.location_on),
+                            ],
+                          ) : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                    _buildSectionCard(
+                      title: 'Élevage',
+                      children: [
+                        CustomSegmentedBool(
+  label: "Avez-vous des animaux d\'élevage ?",
+  value: _aAnimaux,
+  onChanged: (v) => setState(() => _aAnimaux = v),
+),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          child: _aAnimaux ? Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              _buildTextField(_nbBovinsController, 'Nombre de Bovins (Boeufs)', isNumber: true),
+                              _buildTextField(_nbOvinsController, 'Nombre d\'Ovins/Caprins (Moutons, Chèvres)', isNumber: true),
+                              _buildTextField(_nbVolaillesController, 'Nombre de Volailles', isNumber: true),
+                              CustomSegmentedBool(
+  label: 'Élevage à but commercial ?',
+  value: _elevageCommercial,
+  onChanged: (v) => setState(() => _elevageCommercial = v),
+),
+                            ],
+                          ) : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              if (_aParcelles) ...[
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: _typeCulture,
-                  decoration: const InputDecoration(labelText: 'Quelles type de culture pratiquez-vous dans vos exploitations ?'),
-                  items: ['Cultures pérennes', 'Cultures Annuelles', 'Cultures Vivrières']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                  onChanged: (v) => setState(() => _typeCulture = v),
+            ),
+            SafeArea(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: _modeAcquisition,
-                  decoration: const InputDecoration(labelText: 'Comment le ménage à acquis ces exploitations agricoles ?'),
-                  items: ['Achat', 'Lèg', 'Bien de la famille(Filière coutumière)', 'Don', 'Héritage', 'Location', 'Occupation informelle', 'Autre']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                  onChanged: (v) => setState(() => _modeAcquisition = v),
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE1660B),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: _isSaving 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text('ENREGISTRER', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Exploitez-vous vous-même le champ ?'),
-                  value: _exploiteSoiMeme,
-                  onChanged: (v) => setState(() => _exploiteSoiMeme = v),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _localisationController,
-                  decoration: const InputDecoration(labelText: 'Si oui où se situent ces parcelles et sont-elles en exploitations ?'),
-                ),
-              ],
-              
-              const Divider(height: 40, thickness: 2),
-              
-              const Text('ÉLEVAGE', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF77F00))),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Avez-vous des animaux d\'élevage ?'),
-                value: _aAnimaux,
-                onChanged: (v) => setState(() => _aAnimaux = v),
               ),
-              if (_aAnimaux) ...[
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _nbBovinsController,
-                  decoration: const InputDecoration(labelText: 'Nombre de Bovins (Boeufs)'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _nbOvinsController,
-                  decoration: const InputDecoration(labelText: 'Nombre d\'Ovins / Caprins (Moutons, Chèvres)'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _nbVolaillesController,
-                  decoration: const InputDecoration(labelText: 'Nombre de Volailles'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('S\'agit-il d\'un élevage à but commercial ?'),
-                  value: _elevageCommercial,
-                  onChanged: (v) => setState(() => _elevageCommercial = v),
-                ),
-              ],
-
-              const SizedBox(height: 32),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF009E60)),
-                onPressed: _save,
-                child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
+            )
+          ],
         ),
       ),
     );

@@ -73,7 +73,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paramètres', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFFE1660B),
+        backgroundColor: const Color(0xFF1E224A),
         elevation: 0,
       ),
       body: ListView(

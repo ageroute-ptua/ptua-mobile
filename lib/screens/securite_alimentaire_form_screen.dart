@@ -37,7 +37,7 @@ class _SecuriteAlimentaireFormScreenState extends State<SecuriteAlimentaireFormS
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Données de sécurité alimentaire enregistrées !'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Sécurité alimentaire enregistrée !', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
         );
         Navigator.pop(context, true);
       }
@@ -52,6 +52,28 @@ class _SecuriteAlimentaireFormScreenState extends State<SecuriteAlimentaireFormS
     }
   }
 
+  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E224A))),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   Widget _buildDaysInput(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -60,7 +82,7 @@ class _SecuriteAlimentaireFormScreenState extends State<SecuriteAlimentaireFormS
         decoration: InputDecoration(
           labelText: label,
           hintText: 'Ex: 2',
-          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.date_range),
         ),
         keyboardType: TextInputType.number,
         validator: (v) {
@@ -79,33 +101,63 @@ class _SecuriteAlimentaireFormScreenState extends State<SecuriteAlimentaireFormS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sécurité Alimentaire'), backgroundColor: const Color(0xFFF77F00)),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              const Text(
-                'Au cours des 7 derniers jours, combien de jours votre ménage a-t-il dû faire face aux situations suivantes à cause d\'un manque de nourriture ou d\'argent ?',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        title: const Text('Sécurité Alimentaire', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF1E224A),
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildSectionCard(
+                      title: 'Impact sur l\'alimentation',
+                      children: [
+                        const Text(
+                          'Au cours des 7 derniers jours, combien de jours votre ménage a-t-il dû faire face aux situations suivantes à cause d\'un manque de nourriture ou d\'argent ?',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildDaysInput('1. Aliments moins chers que d\'habitude', _joursAlimentsMoinsChersController),
+                        _buildDaysInput('2. Emprunter de la nourriture', _joursEmprunterNourritureController),
+                        _buildDaysInput('3. Limiter la quantité des repas', _joursLimiterQuantiteController),
+                        _buildDaysInput('4. Restreindre la consommation des adultes', _joursRestreindreAdultesController),
+                        _buildDaysInput('5. Réduire le nombre de repas par jour', _joursReduireRepasController),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 24),
-              
-              _buildDaysInput('1. Manger des aliments moins chers que d\'habitude', _joursAlimentsMoinsChersController),
-              _buildDaysInput('2. Emprunter de la nourriture à des amis ou de la famille', _joursEmprunterNourritureController),
-              _buildDaysInput('3. Limiter la quantité des repas de tout le ménage', _joursLimiterQuantiteController),
-              _buildDaysInput('4. Restreindre la consommation des adultes au profit des petits enfants', _joursRestreindreAdultesController),
-              _buildDaysInput('5. Réduire le nombre de repas par jour', _joursReduireRepasController),
-
-              const SizedBox(height: 32),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF009E60)),
-                onPressed: _save,
-                child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
+            ),
+            SafeArea(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+                ),
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE1660B),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: _isSaving 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text('ENREGISTRER', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ),
-            ],
-          ),
+            )
+          ],
         ),
       ),
     );
